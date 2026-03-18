@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Diabetes Risk Predictor | AI Analysis</title>
+    <meta name="description" content="AI-powered tool to predict diabetes risk and get personalized lifestyle recommendations.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="background-fx">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <main class="container">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+            <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg id="moon-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <header class="header">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <h1>Diabetes Risk AI Predictor</h1>
+            <p>Advanced machine learning analysis for diabetes risk evaluation.</p>
+        </header>
+
+        <section class="glass-panel" id="form-section">
+            <form id="prediction-form" autocomplete="off">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <input type="number" id="pregnancies" name="pregnancies" step="1" min="0" required placeholder=" ">
+                        <label for="pregnancies">Pregnancies</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="glucose" name="glucose" step="any" min="0" required placeholder=" ">
+                        <label for="glucose">Glucose (mg/dL)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="bloodPressure" name="bloodPressure" step="any" min="0" required placeholder=" ">
+                        <label for="bloodPressure">Blood Pressure (mm Hg)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="skinThickness" name="skinThickness" step="any" min="0" required placeholder=" ">
+                        <label for="skinThickness">Skin Thickness (mm)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="insulin" name="insulin" step="any" min="0" required placeholder=" ">
+                        <label for="insulin">Insulin Level (IU/mL)</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="bmi" name="bmi" step="any" min="0" required placeholder=" ">
+                        <label for="bmi">BMI</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="dpf" name="dpf" step="any" min="0" required placeholder=" ">
+                        <label for="dpf">Diabetes Pedigree Function</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="number" id="age" name="age" step="1" min="1" required placeholder=" ">
+                        <label for="age">Age (Years)</label>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button type="submit" class="primary-btn" id="submit-btn">
+                        <span class="btn-text">Analyze Risk</span>
+                        <div class="spinner hidden" id="loading-spinner"></div>
+                    </button>
+                </div>
+
+                <div class="parameter-info">
+                    <h3>Understanding the Parameters</h3>
+                    <div class="info-grid">
+                        <div class="info-item"><strong>Pregnancies:</strong> Number of times pregnant. Essential context for gestational diabetes.</div>
+                        <div class="info-item"><strong>Glucose (mg/dL):</strong> Normal fasting range 70-99. Over 125 indicates diabetes. Vital energy source.</div>
+                        <div class="info-item"><strong>Blood Pressure (mmHg):</strong> Ideal is &lt;120/80. Diastolic pressure is commonly measured.</div>
+                        <div class="info-item"><strong>Skin Thickness (mm):</strong> Triceps skin fold thickness. Normal range is typically 10-30 mm.</div>
+                        <div class="info-item"><strong>Insulin (µU/mL):</strong> Normal fasting 2.6-24.9. Hormone that regulates blood sugar.</div>
+                        <div class="info-item"><strong>BMI:</strong> Healthy weight is 18.5-24.9. Over 30 is considered obese. Evaluates body fat.</div>
+                        <div class="info-item"><strong>Diabetes Pedigree:</strong> A score assessing diabetes likelihood based on family genetic history.</div>
+                        <div class="info-item"><strong>Age (Years):</strong> Risk generally increases with age, especially post-45 years.</div>
+                    </div>
+                </div>
+            </form>
+        </section>
+
+        <section class="glass-panel hidden" id="result-section">
+            <div class="result-header">
+                <h2>Analysis Complete</h2>
+                <p>Based on your metrics, here is your risk profile.</p>
+            </div>
+            
+            <div class="risk-display">
+                <div class="risk-badge" id="risk-badge">
+                    <span id="risk-level">Low Risk</span>
+                </div>
+            </div>
+
+            <div class="recommendations">
+                <h3>Recommended Lifestyle Actions</h3>
+                <ul id="recommendation-list">
+                    <!-- Dynamically populated -->
+                </ul>
+            </div>
+
+            <div class="action-bar">
+                <button class="secondary-btn" id="reset-btn">Start New Analysis</button>
+            </div>
+        </section>
+    </main>
+
+    <script src="app.js"></script>
+</body>
+</html>
