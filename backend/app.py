@@ -3,11 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import joblib
+import numpy as np
 import os
 
 app = FastAPI(title="Diabetes Risk Predictor API")
 
-# Allow CORS so the frontend can interact with this API
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,6 +16,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── Input Schema ──────────────────────────────────────────────────────────────
 class PredictionInput(BaseModel):
     pregnancies: float
     glucose: float
@@ -26,74 +27,108 @@ class PredictionInput(BaseModel):
     dpf: float
     age: float
 
-# Define the expected location of the ML model
-MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
-os.makedirs(MODEL_DIR, exist_ok=True)
-MODEL_PATH = os.path.join(MODEL_DIR, "model.joblib")
+# ── Load Model + Scaler ───────────────────────────────────────────────────────
+MODEL_DIR   = os.path.join(os.path.dirname(__file__), "models")
+MODEL_PATH  = os.path.join(MODEL_DIR, "model.joblib")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.joblib")
 
-model = None
+model  = None
+scaler = None
+
 try:
     if os.path.exists(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
-        print(f"Model successfully loaded from {MODEL_PATH}")
+        print(f"✅ Model loaded  → {MODEL_PATH}")
     else:
-        print(f"Warning: Model not found at {MODEL_PATH}. Awaiting placement.")
-except Exception as e:
-    print(f"Error loading model: {e}")
+        print(f"⚠️  model.joblib not found at {MODEL_PATH}")
 
+    if os.path.exists(SCALER_PATH):
+        scaler = joblib.load(SCALER_PATH)
+        print(f"✅ Scaler loaded → {SCALER_PATH}")
+    else:
+        print(f"⚠️  scaler.joblib not found at {SCALER_PATH}")
+
+except Exception as e:
+    print(f"❌ Error loading model/scaler: {e}")
+
+
+def engineer_features(d: PredictionInput) -> np.ndarray:
+    """
+    Mirrors the feature engineering in Mini_Project_VI.ipynb exactly.
+    Returns an array of 11 features in the same order the model was trained on:
+    [Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DPF, Age,
+     BMI_Glucose_Ratio, Age_Pregnancies_Interaction, Insulin_Glucose_Ratio]
+    """
+    bmi_glucose_ratio            = d.bmi / d.glucose if d.glucose != 0 else 0
+    age_pregnancies_interaction  = d.age * d.pregnancies
+    insulin_glucose_ratio        = d.insulin / d.glucose if d.glucose != 0 else 0
+
+    return np.array([[
+        d.pregnancies,
+        d.glucose,
+        d.bloodPressure,
+        d.skinThickness,
+        d.insulin,
+        d.bmi,
+        d.dpf,
+        d.age,
+        bmi_glucose_ratio,
+        age_pregnancies_interaction,
+        insulin_glucose_ratio,
+    ]])
+
+
+def probability_to_risk(prob: float) -> str:
+    """Mirrors the risk-scoring logic from the notebook."""
+    if prob <= 0.30:
+        return "Low"
+    elif prob <= 0.60:
+        return "Medium"
+    else:
+        return "High"
+
+
+# ── Predict Endpoint ──────────────────────────────────────────────────────────
 @app.post("/predict")
 async def predict_risk(data: PredictionInput):
-    # Fallback to simulation if model is not yet placed
-    if model is None:
-        risk = "Low"
-        if data.glucose > 140 or data.bmi > 30:
-            risk = "High"
-        elif data.glucose > 100 or data.bmi > 25:
-            risk = "Medium"
-        return {"risk_level": risk, "simulated": True, "message": "ML model missing. Using heuristic simulation."}
 
-    # Model is loaded, prepare features in the expected order
-    features = [
-        [
-            data.pregnancies,
-            data.glucose,
-            data.bloodPressure,
-            data.skinThickness,
-            data.insulin,
-            data.bmi,
-            data.dpf,
-            data.age
-        ]
-    ]
+    # ── Require model + scaler — no fallback, no wrong results ───────────────
+    if model is None or scaler is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Model not ready. Please run export_model.py first to generate model.joblib and scaler.joblib."
+        )
 
+    # ── Real prediction using trained Random Forest ───────────────────────────
     try:
-        # Standard predict behavior
-        prediction = model.predict(features)
-        
-        # Determine the risk level from the model output.
-        # This mapping can be tweaked to match exactly what your model outputs.
-        pred_val = prediction[0]
-        
-        # Example mapping logic
-        if isinstance(pred_val, str):
-            # E.g., model outputs "High", "Medium", "Low"
-            risk_level = pred_val 
-        elif isinstance(pred_val, (int, float)):
-            # Assuming 0: Low, 1: Medium, 2: High
-            class_map = {0: "Low", 1: "Medium", 2: "High"}
-            risk_level = class_map.get(int(pred_val), "Medium")
-        else:
-            risk_level = str(pred_val)
+        features_raw    = engineer_features(data)          # shape (1, 11)
+        features_scaled = scaler.transform(features_raw)   # same scaler as training
 
-        return {"risk_level": risk_level, "simulated": False}
-        
+        # predict_proba returns [[prob_class0, prob_class1]]
+        # class 1 = diabetes positive → probability of being diabetic
+        proba       = model.predict_proba(features_scaled)[0][1]
+        risk_level  = probability_to_risk(proba)
+
+        return {
+            "risk_level": risk_level,
+            "simulated": False,
+            "probability": round(float(proba), 4)
+        }
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
+
+# ── Health Check ──────────────────────────────────────────────────────────────
 @app.get("/api/health")
 def health_check():
-    return {"status": "Diabetes Risk Predictor API is running."}
+    return {
+        "status": "running",
+        "model_loaded": model is not None,
+        "scaler_loaded": scaler is not None,
+    }
 
-# Mount frontend static files
+
+# ── Serve Frontend ────────────────────────────────────────────────────────────
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")

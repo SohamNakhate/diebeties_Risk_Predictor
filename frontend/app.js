@@ -12,11 +12,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const sunIcon = document.getElementById('sun-icon');
     const moonIcon = document.getElementById('moon-icon');
 
-    // Check saved theme or system preference
-    if (localStorage.getItem('theme') === 'light') {
+    // Check saved theme. If empty, default to 'dark'.
+    const savedTheme = localStorage.getItem('theme') || 'dark';
+
+    if (savedTheme === 'light') {
         document.body.classList.add('light-theme');
-        sunIcon.classList.add('hidden');
+        moonIcon.classList.add('hidden');
+        sunIcon.classList.remove('hidden');
+    } else {
+        // Dark mode is baseline, just ensure icons are correct
+        document.body.classList.remove('light-theme');
         moonIcon.classList.remove('hidden');
+        sunIcon.classList.add('hidden');
     }
 
     themeToggleBtn.addEventListener('click', () => {
@@ -26,11 +33,11 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('theme', isLight ? 'light' : 'dark');
         
         if (isLight) {
-            sunIcon.classList.add('hidden');
-            moonIcon.classList.remove('hidden');
-        } else {
-            sunIcon.classList.remove('hidden');
             moonIcon.classList.add('hidden');
+            sunIcon.classList.remove('hidden');
+        } else {
+            moonIcon.classList.remove('hidden');
+            sunIcon.classList.add('hidden');
         }
     });
 
