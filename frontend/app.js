@@ -76,6 +76,7 @@ document.addEventListener('DOMContentLoaded', () => {
             bmi: document.getElementById('bmi').value,
             dpf: document.getElementById('dpf').value,
             age: document.getElementById('age').value,
+            hba1c: document.getElementById('hba1c').value,
         };
 
         try {

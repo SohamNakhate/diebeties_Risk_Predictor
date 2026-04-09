@@ -25,69 +25,98 @@ class PredictionInput(BaseModel):
     bmi: float
     dpf: float
     age: float
+    hba1c: float
 
-# Define the expected location of the ML model
+# Define the expected location of the ML model and scaler
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
 MODEL_PATH = os.path.join(MODEL_DIR, "model.joblib")
+SCALER_PATH = os.path.join(MODEL_DIR, "scaler.joblib")
 
 model = None
+scaler = None
+
 try:
     if os.path.exists(MODEL_PATH):
         model = joblib.load(MODEL_PATH)
         print(f"Model successfully loaded from {MODEL_PATH}")
-    else:
-        print(f"Warning: Model not found at {MODEL_PATH}. Awaiting placement.")
+    if os.path.exists(SCALER_PATH):
+        scaler = joblib.load(SCALER_PATH)
+        print(f"Scaler successfully loaded from {SCALER_PATH}")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print(f"Error loading model resources: {e}")
+
+def get_bmi_category(bmi: float) -> int:
+    """Standard clinical BMI categorization used in the training notebook."""
+    if bmi < 18.5: return 0  # Underweight
+    if bmi < 25.0: return 1  # Normal
+    if bmi < 30.0: return 2  # Overweight
+    return 3 # Obese
 
 @app.post("/predict")
 async def predict_risk(data: PredictionInput):
-    # Fallback to simulation if model is not yet placed
-    if model is None:
-        risk = "Low"
-        if data.glucose > 140 or data.bmi > 30:
-            risk = "High"
-        elif data.glucose > 100 or data.bmi > 25:
-            risk = "Medium"
-        return {"risk_level": risk, "simulated": True, "message": "ML model missing. Using heuristic simulation."}
+    # Ensure model and scaler are loaded before proceeding
+    if model is None or scaler is None:
+        raise HTTPException(
+            status_code=503, 
+            detail="Machine Learning model or scaler not found. Please ensure model.joblib and scaler.joblib are exported to backend/models/"
+        )
 
-    # Model is loaded, prepare features in the expected order
-    features = [
-        [
-            data.pregnancies,
-            data.glucose,
-            data.bloodPressure,
-            data.skinThickness,
-            data.insulin,
-            data.bmi,
-            data.dpf,
-            data.age
-        ]
+    # Prepare features in the exact order the model expects (10 features)
+    # Order: Pregnancies, Glucose, BloodPressure, SkinThickness, Insulin, BMI, DPF, Age, HbA1c, BMI_Category
+    bmi_cat = get_bmi_category(data.bmi)
+    
+    raw_features = [
+        data.pregnancies,
+        data.glucose,
+        data.bloodPressure,
+        data.skinThickness,
+        data.insulin,
+        data.bmi,
+        data.dpf,
+        data.age,
+        data.hba1c,
+        bmi_cat
     ]
 
     try:
-        # Standard predict behavior
-        prediction = model.predict(features)
-        
-        # Determine the risk level from the model output.
-        # This mapping can be tweaked to match exactly what your model outputs.
-        pred_val = prediction[0]
-        
-        # Example mapping logic
-        if isinstance(pred_val, str):
-            # E.g., model outputs "High", "Medium", "Low"
-            risk_level = pred_val 
-        elif isinstance(pred_val, (int, float)):
-            # Assuming 0: Low, 1: Medium, 2: High
-            class_map = {0: "Low", 1: "Medium", 2: "High"}
-            risk_level = class_map.get(int(pred_val), "Medium")
+        # 1. Apply scaling if available
+        if scaler is not None:
+            features = scaler.transform([raw_features])
         else:
-            risk_level = str(pred_val)
+            features = [raw_features]
 
-        return {"risk_level": risk_level, "simulated": False}
+        # 2. Get prediction probability for better calibration
+        if hasattr(model, "predict_proba"):
+            probs = model.predict_proba(features)[0]
+            # Prob of class 1 (Diabetes)
+            prob_diabetes = float(probs[1])
+            
+            if prob_diabetes > 0.7:
+                risk_level = "High"
+            elif prob_diabetes > 0.3:
+                risk_level = "Medium"
+            else:
+                risk_level = "Low"
+            
+            confidence = prob_diabetes if risk_level == "High" else (1 - prob_diabetes if risk_level == "Low" else 0.5)
+        else:
+            # Fallback to direct prediction
+            prediction = model.predict(features)[0]
+            class_map = {0: "Low", 1: "High"}
+            risk_level = class_map.get(int(prediction), "Medium")
+            prob_diabetes = float(prediction)
+            confidence = 1.0
+
+        return {
+            "risk_level": risk_level,
+            "prediction_probability": prob_diabetes,
+            "confidence_score": confidence,
+            "simulated": False
+        }
         
     except Exception as e:
+        print(f"Prediction error: {e}")
         raise HTTPException(status_code=500, detail=f"Prediction error: {str(e)}")
 
 @app.get("/api/health")
