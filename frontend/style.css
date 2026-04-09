@@ -283,6 +283,10 @@ body:not(.light-theme) .header h1 {
         linear-gradient(#000 0 0) content-box, 
         linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
+    mask: 
+        linear-gradient(#000 0 0) content-box, 
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
     pointer-events: none;
 }
 
@@ -321,6 +325,10 @@ body.light-theme .glass-panel::after {
         linear-gradient(#000 0 0) content-box, 
         linear-gradient(#000 0 0);
     -webkit-mask-composite: xor;
+    mask: 
+        linear-gradient(#000 0 0) content-box, 
+        linear-gradient(#000 0 0);
+    mask-composite: exclude;
     pointer-events: none;
 }
 
@@ -498,6 +506,12 @@ body.light-theme .primary-btn:hover {
     color: var(--text-main);
     border: 1px solid var(--glass-border);
     backdrop-filter: blur(10px);
+}
+
+body.light-theme .secondary-btn {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 .secondary-btn:hover {
