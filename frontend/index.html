@@ -117,8 +117,21 @@
                 <button class="secondary-btn" id="reset-btn">Start New Analysis</button>
             </div>
         </section>
+        
+        <div id="charts-section" class="glass-panel hidden">
+            <h3>📊 Health Metrics Comparison</h3>
+            <div>
+                <div class="chart-container">
+                    <canvas id="glucoseChart"></canvas>
+                </div>
+                <div class="chart-container">
+                    <canvas id="hba1cChart"></canvas>
+                </div>
+            </div>
+        </div>
     </main>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="app.js"></script>
 </body>
 </html>
