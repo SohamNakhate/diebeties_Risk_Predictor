@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from pydantic import BaseModel
 import joblib
 import os
@@ -143,6 +143,12 @@ async def predict_risk(data: PredictionInput):
             detail=f"Prediction failed: {str(e)}"
         )
 
+# Redirect root to login page
+@app.get("/")
+async def root():
+    return RedirectResponse(url="/login.html")
+
 # Mount frontend static files
 frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
-app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
+app.mount("/", StaticFiles(directory=frontend_dir, html=False), name="frontend")
+

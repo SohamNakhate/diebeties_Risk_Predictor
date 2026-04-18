@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Diabetes Risk Predictor</title>
+    <meta name="description" content="Log in to the AI-powered Diabetes Risk Predictor to analyze your health metrics.">
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Login-specific layout — keeps content vertically centered */
+        body {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 480px;
+            padding: 2rem;
+            z-index: 1;
+        }
+
+        .login-header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            animation: fadeInDown 0.8s ease-out;
+        }
+
+        .login-header .logo-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 64px;
+            height: 64px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent-primary), #3b82f6);
+            margin-bottom: 1.5rem;
+            box-shadow: 0 10px 30px rgba(6, 182, 212, 0.3);
+        }
+
+        .login-header .logo-icon svg {
+            color: white;
+            width: 32px;
+            height: 32px;
+        }
+
+        .login-header h1 {
+            font-size: 2rem;
+            font-weight: 750;
+            letter-spacing: -0.03em;
+            margin-bottom: 0.5rem;
+            color: var(--text-main);
+        }
+
+        body:not(.light-theme) .login-header h1 {
+            text-shadow:
+                0 2px 10px rgba(255, 255, 255, 0.1),
+                0 0 20px rgba(6, 182, 212, 0.2);
+        }
+
+        .login-header p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+
+        /* Login form grid — stack inputs vertically */
+        .login-form .input-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        /* Error toast */
+        .login-error {
+            display: none;
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+            color: #fca5a5;
+            padding: 0.85rem 1.25rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.3s ease-out;
+            backdrop-filter: blur(8px);
+        }
+
+        body.light-theme .login-error {
+            background: rgba(239, 68, 68, 0.08);
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            color: #dc2626;
+        }
+
+        .login-error.visible {
+            display: block;
+        }
+
+        /* Password visibility toggle inside input group */
+        .input-group .toggle-password {
+            position: absolute;
+            right: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s ease;
+            box-shadow: none;
+        }
+
+        .input-group .toggle-password:hover {
+            color: var(--accent-primary);
+            transform: translateY(-50%) scale(1.1);
+            box-shadow: none;
+        }
+
+        @media (max-width: 500px) {
+            .login-container {
+                padding: 1rem;
+            }
+            .login-header h1 {
+                font-size: 1.6rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="background-fx">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <main class="login-container">
+        <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+            <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg id="moon-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <div class="login-header">
+            <div class="logo-icon">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+            </div>
+            <h1>Welcome Back</h1>
+            <p>Sign in to access the Diabetes Risk AI Predictor</p>
+        </div>
+
+        <section class="glass-panel" id="login-panel">
+            <div id="login-error" class="login-error">Invalid username or password</div>
+
+            <form id="login-form" class="login-form" autocomplete="off">
+                <div class="input-grid">
+                    <div class="input-group">
+                        <input type="text" id="username" name="username" required placeholder=" " autofocus>
+                        <label for="username">Username</label>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="password" name="password" required placeholder=" ">
+                        <label for="password">Password</label>
+                        <button type="button" class="toggle-password" id="toggle-password-btn" aria-label="Toggle password visibility">
+                            <svg id="eye-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <svg id="eye-off-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="action-bar">
+                    <button type="submit" class="primary-btn" id="login-btn">
+                        <span class="btn-text">Sign In</span>
+                        <div class="spinner hidden" id="login-spinner"></div>
+                    </button>
+                </div>
+            </form>
+        </section>
+    </main>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // ── Theme Toggle (same logic as index.html) ──
+        const themeToggleBtn = document.getElementById('theme-toggle');
+        const sunIcon = document.getElementById('sun-icon');
+        const moonIcon = document.getElementById('moon-icon');
+
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+            sunIcon.classList.add('hidden');
+            moonIcon.classList.remove('hidden');
+        }
+
+        themeToggleBtn.addEventListener('click', () => {
+            document.body.classList.toggle('light-theme');
+            const isLight = document.body.classList.contains('light-theme');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+
+            if (isLight) {
+                sunIcon.classList.add('hidden');
+                moonIcon.classList.remove('hidden');
+            } else {
+                sunIcon.classList.remove('hidden');
+                moonIcon.classList.add('hidden');
+            }
+        });
+
+        // ── Password Visibility Toggle ──
+        const togglePasswordBtn = document.getElementById('toggle-password-btn');
+        const passwordInput = document.getElementById('password');
+        const eyeIcon = document.getElementById('eye-icon');
+        const eyeOffIcon = document.getElementById('eye-off-icon');
+
+        togglePasswordBtn.addEventListener('click', () => {
+            const isPassword = passwordInput.type === 'password';
+            passwordInput.type = isPassword ? 'text' : 'password';
+            eyeIcon.classList.toggle('hidden');
+            eyeOffIcon.classList.toggle('hidden');
+        });
+
+        // ── Login Logic ──
+        const form = document.getElementById('login-form');
+        const loginBtn = document.getElementById('login-btn');
+        const btnText = loginBtn.querySelector('.btn-text');
+        const spinner = document.getElementById('login-spinner');
+        const errorBox = document.getElementById('login-error');
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+
+            // Hide previous error
+            errorBox.classList.remove('visible');
+
+            // Loading state
+            btnText.classList.add('hidden');
+            spinner.classList.remove('hidden');
+            loginBtn.disabled = true;
+
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+
+            // Small delay to show the loading animation
+            setTimeout(() => {
+                if (user === 'admin' && pass === '1234') {
+                    localStorage.setItem('loggedIn', 'true');
+                    window.location.href = 'index.html';
+                } else {
+                    errorBox.classList.add('visible');
+                    btnText.classList.remove('hidden');
+                    spinner.classList.add('hidden');
+                    loginBtn.disabled = false;
+
+                    // Shake the panel on error
+                    const panel = document.getElementById('login-panel');
+                    panel.style.animation = 'none';
+                    panel.offsetHeight; // trigger reflow
+                    panel.style.animation = 'shake 0.5s ease';
+                }
+            }, 800);
+        });
+    });
+    </script>
+
+    <style>
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-10px); }
+            40% { transform: translateX(10px); }
+            60% { transform: translateX(-6px); }
+            80% { transform: translateX(6px); }
+        }
+    </style>
+</body>
+</html>

@@ -34,6 +34,29 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // Account Avatar Dropdown & Sign Out
+    const accountAvatar = document.getElementById('account-avatar');
+    const accountDropdown = document.getElementById('account-dropdown');
+    const signoutBtn = document.getElementById('signout-btn');
+
+    accountAvatar.addEventListener('click', (e) => {
+        e.stopPropagation();
+        accountDropdown.classList.toggle('open');
+    });
+
+    // Close dropdown when clicking anywhere else
+    document.addEventListener('click', (e) => {
+        if (!accountAvatar.contains(e.target)) {
+            accountDropdown.classList.remove('open');
+        }
+    });
+
+    // Sign Out
+    signoutBtn.addEventListener('click', () => {
+        localStorage.removeItem('loggedIn');
+        window.location.href = 'login.html';
+    });
+
     // Recommendations database based on risk level
     const recommendations = {
         'Low': [
@@ -293,8 +316,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         const radius = arc.outerRadius - 10;
 
                         // RANGE
-                        const min = 70;
-                        const max = 200;
+                        const min = 60;
+                        const max = 300;
                         const clamped = Math.max(min, Math.min(glucose, max));
                         const percent = (clamped - min) / (max - min);
 
@@ -350,6 +373,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // ===== RANGE BARS =====
         try {
             const rangeContainer = h.parentElement;
+
+            // Clamp helper: keeps marker within 2%–98% of the bar
+            const clamp = (val, min, max) => Math.min(98, Math.max(2, ((val - min) / (max - min)) * 100));
+
+            const glucosePos = clamp(glucose, 40, 300);
+            const hba1cPos = clamp(hba1c, 3, 14);
+
             rangeContainer.innerHTML = `
                 <div style="padding: 20px; display: flex; flex-direction: column; gap: 30px;">
                     <!-- Glucose Range Bar -->
@@ -359,12 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="color: #06b6d4; font-weight: bold; font-size: 16px;">${glucose.toFixed(0)}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">70</span>
-                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #10b981 0%, #10b981 30%, #facc15 30%, #facc15 56%, #ef4444 56%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
-                                <div style="position: absolute; top: -8px; width: 24px; height: 36px; background: rgba(6, 182, 212, 0.2); border: 2px solid #06b6d4; border-radius: 4px; left: calc(${((glucose - 70) / 130) * 100}% - 12px); transition: left 0.3s;">
+                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">40</span>
+                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #10b981 0%, #10b981 23%, #facc15 23%, #facc15 33%, #ef4444 33%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
+                                <div style="position: absolute; top: -4px; width: 4px; height: 28px; background: #ffffff; border-radius: 2px; left: ${glucosePos}%; transform: translateX(-50%); transition: left 0.3s; box-shadow: 0 0 6px rgba(0,0,0,0.5);">
                                 </div>
                             </div>
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">160+</span>
+                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">300+</span>
                         </div>
                     </div>
 
@@ -375,12 +405,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             <span style="color: #06b6d4; font-weight: bold; font-size: 16px;">${hba1c.toFixed(1)}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="ccolor: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">4.0</span>
-                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #06b6d4 0%, #06b6d4 30%, #10b981 30%, #10b981 50%, #facc15 50%, #facc15 70%, #ef4444 70%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
-                                <div style="position: absolute; top: -8px; width: 24px; height: 36px; background: rgba(6, 182, 212, 0.2); border: 2px solid #06b6d4; border-radius: 4px; left: calc(${(hba1c / 9) * 100}% - 12px); transition: left 0.3s;">
+                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">3.0</span>
+                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #06b6d4 0%, #06b6d4 25%, #10b981 25%, #10b981 43%, #facc15 43%, #facc15 59%, #ef4444 59%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
+                                <div style="position: absolute; top: -4px; width: 4px; height: 28px; background: #ffffff; border-radius: 2px; left: ${hba1cPos}%; transform: translateX(-50%); transition: left 0.3s; box-shadow: 0 0 6px rgba(0,0,0,0.5);">
                                 </div>
                             </div>
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">9.0+</span>
+                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">14.0+</span>
                         </div>
                     </div>
 
