@@ -37,3 +37,4 @@ ENV/
 .idea/
 .DS_Store
 Thumbs.db
+pima_with_hba1c.csv
