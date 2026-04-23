@@ -19,19 +19,25 @@ An advanced, AI-powered web application designed to predict the risk of diabetes
 
 ## ⚙️ Setup & Installation
 
-1. **Install Dependencies**:
-   ```bash
-   pip install -r backend/requirements.txt
+1. **Create Virtual Environment**:
+   First, create a `.venv` directory for your project:
+   ```powershell
+   python -m venv .venv
    ```
 
-2. **Run the Project**:
-   From the project root directory, run:
-   ```bash
-   python -m uvicorn app:app --reload
+2. **Install Dependencies**:
+   You can install the dependencies directly using the environment's pip (no need to run an activate script!):
+   ```powershell
+   .\.venv\Scripts\pip install -r backend/requirements.txt
+   ```
+
+3. **Run the Project**:
+   From the project root directory, start the server directly using the environment's python executable:
+   ```powershell
+   .\.venv\Scripts\python -m uvicorn app:app --reload
    ```
 
 This will start the backend server at `http://localhost:8000` and automatically serve the frontend.
-
 ## 🧠 Model Parameters
 The analysis is now based on **10 clinical features** for higher accuracy:
 - Pregnancies

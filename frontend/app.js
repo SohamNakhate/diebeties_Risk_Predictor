@@ -1,4 +1,44 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // History Persistence Setup
+    function initHistory() {
+        let history = JSON.parse(localStorage.getItem('diabetesHistory'));
+        // Force pre-populate realistic 6-month prediabetic history if empty or under 13 points (demo purposes)
+        if (!history || history.length < 13) {
+            const now = Date.now();
+            const twoWeeksMs = 1000 * 60 * 60 * 24 * 14; 
+            const newHistory = [];
+            
+            // 13 biweekly data points (approx 6 months), realistic prediabetic ups and downs
+            const glucosePath = [121, 118, 122, 115, 110, 105, 108, 112, 115, 118, 114, 111, 109];
+            const bmiPath = [28.5, 28.5, 28.4, 28.2, 28.0, 27.9, 27.9, 28.0, 28.1, 28.1, 28.0, 27.8, 27.7];
+            // Added corresponding realistic HBA1C and Blood Pressure
+            const hba1cPath = [6.4, 6.3, 6.4, 6.1, 5.9, 5.8, 5.8, 5.9, 6.0, 6.2, 6.0, 5.9, 5.8];
+            const bpPath = [132, 130, 131, 128, 125, 122, 122, 124, 126, 129, 126, 124, 123];
+
+            // Older logs first, newest logs last
+            for (let i = 0; i < 13; i++) {
+                newHistory.push({
+                    timestamp: new Date(now - (12 - i) * twoWeeksMs).toISOString(),
+                    // Expanding to include all 9 identical database inputs for the form
+                    pregnancies: 1, // static
+                    glucose: glucosePath[i],
+                    bloodPressure: bpPath[i],
+                    skinThickness: 22, // static for this patient profile
+                    insulin: 50, // static moderately elevated
+                    bmi: bmiPath[i],
+                    dpf: 0.45, // static genetic constant
+                    age: 45, // static
+                    hba1c: hba1cPath[i],
+                    risk_level: 'Medium'
+                });
+            }
+            
+            // LocalStorage expects index 0 to be newest (reverse the chronological array)
+            localStorage.setItem('diabetesHistory', JSON.stringify(newHistory.reverse()));
+        }
+    }
+    initHistory();
+
     const form = document.getElementById('prediction-form');
     const formSection = document.getElementById('form-section');
     const resultSection = document.getElementById('result-section');
@@ -6,6 +46,110 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnText = document.querySelector('.btn-text');
     const spinner = document.getElementById('loading-spinner');
     const resetBtn = document.getElementById('reset-btn');
+    const viewVisualsBtn = document.getElementById('view-visuals-btn');
+
+    if (viewVisualsBtn) {
+        viewVisualsBtn.addEventListener('click', () => {
+            window.open('analytics.html', '_blank');
+        });
+    }
+
+    // Modal UI logic mapped to buttons
+    const viewHistoryBtn = document.getElementById('view-history-btn');
+    const historyModalOverlay = document.getElementById('history-modal-overlay');
+    const closeHistoryBtn = document.getElementById('close-history-btn');
+    const clearHistoryBtn = document.getElementById('clear-history-btn');
+
+    if (viewHistoryBtn) {
+        viewHistoryBtn.addEventListener('click', () => {
+            renderHistory();
+            historyModalOverlay.classList.remove('hidden');
+        });
+    }
+
+    if (closeHistoryBtn) {
+        closeHistoryBtn.addEventListener('click', () => {
+            historyModalOverlay.classList.add('hidden');
+        });
+    }
+
+    if (historyModalOverlay) {
+        historyModalOverlay.addEventListener('click', (e) => {
+            if (e.target === historyModalOverlay) {
+                historyModalOverlay.classList.add('hidden');
+            }
+        });
+    }
+
+    if (clearHistoryBtn) {
+        clearHistoryBtn.addEventListener('click', () => {
+            if (window.confirm("Are you sure you want to clear your entire prediction history?")) {
+                localStorage.removeItem('diabetesHistory');
+                renderHistory(); // Refresh immediately to empty state
+            }
+        });
+    }
+
+    // Render History Modal
+    function renderHistory() {
+        const listContainer = document.getElementById('history-list');
+        if (!listContainer) return;
+        
+        listContainer.innerHTML = '';
+        let history = JSON.parse(localStorage.getItem('diabetesHistory')) || [];
+        
+        if (history.length === 0) {
+            listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No history found. Try running an analysis.</p>';
+            return;
+        }
+
+        history.forEach(session => {
+            const dateObj = new Date(session.timestamp);
+            const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+            const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+            
+            let pillClass = '';
+            if (session.risk_level === 'High') pillClass = 'var(--risk-high)';
+            if (session.risk_level === 'Medium') pillClass = 'var(--risk-medium)';
+            if (session.risk_level === 'Low') pillClass = 'var(--risk-low)';
+
+            const card = document.createElement('div');
+            card.className = 'history-card';
+            card.innerHTML = `
+                <div class="history-card-header">
+                    <span class="history-card-date">${dateStr} • ${timeStr}</span>
+                    <span class="history-pill" style="background-color: ${pillClass}33; color: ${pillClass}; border: 1px solid ${pillClass};">${session.risk_level} Risk</span>
+                </div>
+                <div class="history-card-metrics">
+                    <span>Glucose: <strong>${session.glucose}</strong></span>
+                    <span>BMI: <strong>${session.bmi}</strong></span>
+                </div>
+            `;
+            listContainer.appendChild(card);
+        });
+    }
+
+    function saveToHistory(inputs, riskLevel) {
+        let history = JSON.parse(localStorage.getItem('diabetesHistory')) || [];
+        
+        // Build payload
+        const record = {
+            timestamp: new Date().toISOString(),
+            glucose: inputs.glucose,
+            bmi: inputs.bmi,
+            risk_level: riskLevel
+        };
+
+        // Insert at the beginning
+        history.unshift(record);
+
+        // Cap at 30 logic per implementation plan constraints
+        if (history.length > 30) {
+            history.pop();
+        }
+
+        localStorage.setItem('diabetesHistory', JSON.stringify(history));
+    }
 
     // Theme Toggle Logic
     const themeToggleBtn = document.getElementById('theme-toggle');
@@ -120,6 +264,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             const data = await response.json();
+            saveToHistory(formData, data.risk_level); // Save locally before showing
             displayResults(data.risk_level); // Expected: "Low", "Medium", or "High"
 
         } catch (error) {
@@ -134,6 +279,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (glucose > 140 || bmi > 30) simulatedRisk = 'High';
                 else if (glucose > 100 || bmi > 25) simulatedRisk = 'Medium';
 
+                saveToHistory(formData, simulatedRisk); // Save simulated payload
                 displayResults(simulatedRisk);
             }, 1500);
         } finally {
@@ -161,8 +307,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const inputs = form.querySelectorAll('input');
         inputs.forEach(input => input.blur());
 
-        const chartsSection = document.getElementById('charts-section');
-        if (chartsSection) chartsSection.classList.add('hidden');
+        // No charts section inline anymore
+
     });
 
     function displayResults(riskLevel) {
@@ -196,267 +342,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 resultSection.classList.add('fade-in');
             }, 50);
 
-            const chartsSection = document.getElementById('charts-section');
-            if (chartsSection) chartsSection.classList.remove('hidden');
-
             if (window.latestInputs) {
-                const glucose = Number(window.latestInputs.glucose) || 0;
-                const hba1c = Number(window.latestInputs.hba1c) || 0;
-                renderCharts(glucose, hba1c);
+                // Save context so the new tab can access it
+                localStorage.setItem('analyticsData', JSON.stringify(window.latestInputs));
             }
         }, 400); // Wait for transition out
     }
 
-    function renderCharts(glucose, hba1c) {
-        console.log("renderCharts called with glucose:", glucose, "hba1c:", hba1c);
-        
-        // Safety checks
-        if (typeof Chart === "undefined") {
-            console.error("Chart.js not loaded");
-            return;
-        }
-
-        glucose = Number(glucose) || 0;
-        hba1c = Number(hba1c) || 0;
-
-        if (isNaN(glucose) || isNaN(hba1c)) {
-            console.error("Invalid data");
-            return;
-        }
-
-        // Get canvas elements
-        const g = document.getElementById('glucoseChart');
-        const h = document.getElementById('hba1cChart');
-
-        if (!g || !h) {
-            console.error("Canvas elements not found");
-            return;
-        }
-
-        // Theme colors
-        var isLight = document.body.classList.contains('light-theme');
-        var textColor = isLight ? '#0f172a' : '#ffffff';
-
-        // Destroy existing charts
-        if (window.glucoseChart && typeof window.glucoseChart.destroy === "function") {
-            window.glucoseChart.destroy();
-        }
-        if (window.hba1cChart && typeof window.hba1cChart.destroy === "function") {
-            window.hba1cChart.destroy();
-        }
-
-        // ===== GLUCOSE GAUGE CHART (Semicircle with zones) =====
-        try {
-            // STATUS
-            var glucoseStatus = "Normal";
-            if (glucose >= 126) glucoseStatus = "Diabetic";
-            else if (glucose >= 100) glucoseStatus = "Prediabetic";
-
-            var glucoseConfig = {
-                type: 'doughnut',
-                data: {
-                    labels: ['Normal\n(70-99)', 'Prediabetic\n(100-125)', 'Diabetic\n(126+)', 'Remaining'],
-                    datasets: [{
-                        data: [30, 26, 44, 0],
-                        backgroundColor: [
-                            '#10b981',  // Green - Normal
-                            '#facc15',  // Yellow - Prediabetic
-                            '#ef4444',  // Red - Diabetic
-                            'rgba(100, 116, 139, 0.1)'  // Gray for visual
-                        ],
-                        borderColor: [
-                            '#059669',
-                            '#d97706',
-                            '#dc2626',
-                            'transparent'
-                        ],
-                        borderWidth: 2,
-                        circumference: 180,
-                        rotation: 270
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: {
-                        duration: 2000,
-                        easing: 'easeOutQuart'
-                    },
-                    plugins: {
-                        legend: {
-                            display: true,
-                            position: 'bottom',
-                            labels: {
-                                color: textColor,
-                                font: { size: 11, weight: '600', family: "'Inter', sans-serif" },
-                                padding: 15,
-                                boxWidth: 10,
-                                usePointStyle: true
-                            }
-                        },
-                        tooltip: {
-                            backgroundColor: 'rgba(15, 23, 42, 0.95)',
-                            titleColor: '#fff',
-                            bodyColor: '#e2e8f0',
-                            borderColor: '#06b6d4',
-                            borderWidth: 2,
-                            padding: 10
-                        }
-                    }
-                },
-                plugins: [{
-                    id: 'gaugeNeedle',
-                    afterDatasetsDraw: function(chart) {
-                        const { ctx } = chart;
-                        const meta = chart.getDatasetMeta(0);
-                        const arc = meta.data[0];
-
-                        const centerX = arc.x;
-                        const centerY = arc.y;
-                        const radius = arc.outerRadius - 10;
-
-                        // RANGE
-                        const min = 60;
-                        const max = 300;
-                        const clamped = Math.max(min, Math.min(glucose, max));
-                        const percent = (clamped - min) / (max - min);
-
-                        // ✅ CORRECT ANGLE
-                        const angle = Math.PI + (percent * Math.PI);
-
-                        ctx.save();
-
-                        // Needle
-                        ctx.beginPath();
-                        ctx.lineWidth = 3;
-                        ctx.strokeStyle = '#06b6d4';
-                        ctx.moveTo(centerX, centerY);
-                        ctx.lineTo(
-                            centerX + radius * Math.cos(angle),
-                            centerY + radius * Math.sin(angle)
-                        );
-                        ctx.stroke();
-
-                        // Center dot
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-                        ctx.fillStyle = '#06b6d4';
-                        ctx.fill();
-
-                        // TEXT
-                        ctx.fillStyle = '#ffffff';
-                        ctx.font = 'bold 22px Inter';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(glucose + ' mg/dL', centerX, centerY - 20);
-
-                        // STATUS
-                        let status = "Normal";
-                        let color = '#10b981';
-                        if (glucose >= 126) { status = "Diabetic"; color = '#ef4444'; }
-                        else if (glucose >= 100) { status = "Prediabetic"; color = '#facc15'; }
-
-                        ctx.fillStyle = color;
-                        ctx.font = 'bold 14px Inter';
-                        ctx.fillText(status, centerX, centerY + 20);
-
-                        ctx.restore();
-                    }
-                }]
-            };
-            
-            window.glucoseChart = new Chart(g, glucoseConfig);
-            console.log("Glucose gauge created successfully");
-        } catch (err) {
-            console.error("Error creating glucose gauge:", err);
-        }
-
-        // ===== RANGE BARS =====
-        try {
-            const rangeContainer = h.parentElement;
-
-            // Clamp helper: keeps marker within 2%–98% of the bar
-            const clamp = (val, min, max) => Math.min(98, Math.max(2, ((val - min) / (max - min)) * 100));
-
-            const glucosePos = clamp(glucose, 40, 300);
-            const hba1cPos = clamp(hba1c, 3, 14);
-
-            rangeContainer.innerHTML = `
-                <div style="padding: 20px; display: flex; flex-direction: column; gap: 30px;">
-                    <!-- Glucose Range Bar -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="color: ${textColor}; font-weight: 600; font-size: 14px;">Fasting Range (mg/dL)</span>
-                            <span style="color: #06b6d4; font-weight: bold; font-size: 16px;">${glucose.toFixed(0)}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">40</span>
-                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #10b981 0%, #10b981 23%, #facc15 23%, #facc15 33%, #ef4444 33%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
-                                <div style="position: absolute; top: -4px; width: 4px; height: 28px; background: #ffffff; border-radius: 2px; left: ${glucosePos}%; transform: translateX(-50%); transition: left 0.3s; box-shadow: 0 0 6px rgba(0,0,0,0.5);">
-                                </div>
-                            </div>
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">300+</span>
-                        </div>
-                    </div>
-
-                    <!-- HbA1c Range Bar -->
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <span style="color: ${textColor}; font-weight: 600; font-size: 14px;">3-Month Average (%)</span>
-                            <span style="color: #06b6d4; font-weight: bold; font-size: 16px;">${hba1c.toFixed(1)}</span>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 8px;">
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">3.0</span>
-                            <div style="flex: 1; height: 20px; background: linear-gradient(90deg, #06b6d4 0%, #06b6d4 25%, #10b981 25%, #10b981 43%, #facc15 43%, #facc15 59%, #ef4444 59%, #ef4444 100%); border-radius: 10px; position: relative; overflow: visible;">
-                                <div style="position: absolute; top: -4px; width: 4px; height: 28px; background: #ffffff; border-radius: 2px; left: ${hba1cPos}%; transform: translateX(-50%); transition: left 0.3s; box-shadow: 0 0 6px rgba(0,0,0,0.5);">
-                                </div>
-                            </div>
-                            <span style="color: ${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'}; font-size: 12px;">14.0+</span>
-                        </div>
-                    </div>
-
-                    <!-- Legend -->
-                    <div style="
-                        display: flex;
-                        flex-wrap: wrap;
-                        gap: 20px;
-                        margin-top: 20px;
-                        background: rgba(15, 23, 42, 0.6);
-                        padding: 18px 24px;
-                        border-radius: 12px;
-                        backdrop-filter: blur(12px);
-                        border: 1px solid rgba(255,255,255,0.08);
-                    ">
-
-                        ${[
-                            {color:'#06b6d4', title:'Optimal', text:'HbA1c: 4.0-5.7%'},
-                            {color:'#10b981', title:'Normal', text:'Glucose: 70-99 mg/dL'},
-                            {color:'#facc15', title:'Prediabetic', text:'Glucose: 100-125 mg/dL<br>HbA1c: 5.7-6.5%'},
-                            {color:'#ef4444', title:'Diabetic', text:'Glucose: 126+ mg/dL<br>HbA1c: 6.5%+'}
-                        ].map(item => `
-                            <div style="min-width: 180px;">
-                                <div style="display:flex; gap:10px; align-items:center; margin-bottom:6px;">
-                                    <div style="width:16px;height:16px;background:${item.color};border-radius:3px;"></div>
-                                    <span style="color:${textColor}; font-weight:600; font-size:13px;">
-                                        ${item.title}
-                                    </span>
-                                </div>
-                                <div style="
-                                    color:${textColor === '#ffffff' ? 'rgba(255,255,255,0.75)' : '#475569'};
-                                    font-size:12px;
-                                    line-height:1.5;
-                                    margin-left:26px;
-                                ">
-                                    ${item.text}
-                                </div>
-                            </div>
-                        `).join('')}
-
-                    </div>
-                </div>
-            `;
-            console.log("Range bars created successfully");
-        } catch (err) {
-            console.error("Error creating range bars:", err);
-        }
-    }
+    // renderCharts has been moved to analytics.js
 });

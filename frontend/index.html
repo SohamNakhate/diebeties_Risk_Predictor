@@ -273,27 +273,34 @@
             <div class="recommendations">
                 <h3>Recommended Lifestyle Actions</h3>
                 <ul id="recommendation-list">
-                    <!-- Dynamically populated -->
-                </ul>
+                    </ul>
             </div>
 
-            <div class="action-bar">
-                <button class="secondary-btn" id="reset-btn">Start New Analysis</button>
+            <div class="action-bar" style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem;">
+                <button class="primary-btn" id="view-visuals-btn">View Detailed Analytics</button>
+                <button class="primary-btn" id="reset-btn">Start New Analysis</button>
+                <button class="secondary-btn" id="view-history-btn" style="width: 100%; max-width: 300px; margin-top: 0.5rem;">View Past Logs</button>
             </div>
         </section>
-        
-        <div id="charts-section" class="glass-panel hidden">
-            <h3>Health Metrics Comparison</h3>
-            <div>
-                <div class="chart-container">
-                    <canvas id="glucoseChart"></canvas>
-                </div>
-                <div class="chart-container">
-                    <canvas id="hba1cChart"></canvas>
-                </div>
+    </main>
+
+    <!-- History Log Modal -->
+    <div class="modal-overlay hidden" id="history-modal-overlay">
+        <div class="glass-panel history-modal">
+            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; border-bottom: 1px solid var(--glass-border); padding-bottom: 1rem;">
+                <h3 style="margin: 0; font-size: 1.5rem; color: var(--text-main);">Prediction History</h3>
+                <button class="secondary-btn modal-close" id="close-history-btn" style="padding: 0.5rem 1rem;">Close</button>
+            </div>
+            
+            <div class="history-list-container" id="history-list" style="max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem; padding-right: 0.5rem;">
+                <!-- Dynamically populated history cards go here -->
+            </div>
+            
+            <div style="text-align: center;">
+                <button class="secondary-btn" id="clear-history-btn" style="color: var(--risk-high); border-color: var(--risk-high);">Clear All History</button>
             </div>
         </div>
-    </main>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="app.js"></script>

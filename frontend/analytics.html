@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detailed Analytics - Diabetes Risk Predictor</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="light-theme">
+    <div class="background-fx">
+        <div class="orb orb-1"></div>
+        <div class="orb orb-2"></div>
+        <div class="orb orb-3"></div>
+    </div>
+
+    <!-- Top-right bar: theme toggle -->
+    <div class="top-bar" style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 100;">
+        <button id="theme-toggle" class="theme-toggle" style="position:static" aria-label="Toggle theme">
+            <svg id="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg id="moon-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+    </div>
+
+    <main class="container" style="max-width: 1000px;">
+        <div class="glass-panel" id="charts-section">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h3>Health Analytics Dashboard</h3>
+                <button class="secondary-btn" id="close-btn" style="padding: 0.5rem 1rem; font-size: 0.9rem;">Close Tab</button>
+            </div>
+            
+            <div class="glass-panel" style="margin-bottom: 24px; padding: 1.5rem 2rem;">
+                <h3 style="color: var(--accent-primary); margin-bottom: 0.75rem; font-size: 1.2rem;">Clinical Risk Analytics</h3>
+                <p id="clinical-summary-text" style="color: var(--text-muted); line-height: 1.6; font-size: 0.95rem;">
+                </p>
+            </div>
+            
+            <div class="dashboard-grid bento-grid" style="display: grid; gap: 24px;">
+                <!-- Chart 1: Systemic Health Radar -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Systemic Health Snapshot</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="radarChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Chart 2: Risk Contribution -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Risk by Factor</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="barChart"></canvas>
+                    </div>
+                    <div class="chart-legend" style="display: flex; justify-content: center; flex-wrap: wrap; gap: 16px; font-size: 0.8rem; color: var(--text-muted); margin-top: auto; padding-top: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></div>Low/Healthy</div>
+                        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #facc15;"></div>Caution/Borderline</div>
+                        <div style="display: flex; align-items: center; gap: 6px;"><div style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></div>High/Diabetic</div>
+                    </div>
+                </div>
+                
+                <!-- Chart 3: Blood Sugar Gauge -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Blood Sugar Indicator</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="gaugeChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 4: Vitals Correlation -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Vitals Correlation (BMI vs BP)</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="scatterChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 5: Risk Trajectory -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Historical & Projected Glucose</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="lineChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Chart 6: Lifestyle vs Genetics -->
+                <div class="chart-container">
+                    <h4 class="chart-title">Lifestyle vs. Genetics</h4>
+                    <div class="chart-wrapper">
+                        <canvas id="polarChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Card 7: Key Health Indicators -->
+                <div class="chart-container" style="justify-content: center;">
+                    <h4 class="chart-title" style="text-align: center; margin-bottom: 2rem;">Key Health Indicators</h4>
+                    
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600;">
+                            <span>Fasting Glucose (mg/dL)</span>
+                            <span id="indicator-glucose-val" style="color: #0ea5e9;">90</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">40</span>
+                            <div style="flex: 1; height: 12px; border-radius: 6px; position: relative; background: linear-gradient(90deg, #10b981 0%, #10b981 25%, #facc15 25%, #facc15 35%, #ef4444 35%, #ef4444 100%);">
+                                <div id="marker-glucose" style="position: absolute; top: -4px; width: 4px; height: 20px; background: white; border-radius: 2px; left: 0%; transform: translateX(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.5); transition: left 0.5s ease;"></div>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">300+</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 2rem;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-weight: 600;">
+                            <span>HbA1c 3-Month Avg (%)</span>
+                            <span id="indicator-hba1c-val" style="color: #0ea5e9;">7.0</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">3.0</span>
+                            <div style="flex: 1; height: 12px; border-radius: 6px; position: relative; background: linear-gradient(90deg, #0ea5e9 0%, #0ea5e9 30%, #10b981 30%, #10b981 45%, #facc15 45%, #facc15 60%, #ef4444 60%, #ef4444 100%);">
+                                <div id="marker-hba1c" style="position: absolute; top: -4px; width: 4px; height: 20px; background: white; border-radius: 2px; left: 0%; transform: translateX(-50%); box-shadow: 0 0 4px rgba(0,0,0,0.5); transition: left 0.5s ease;"></div>
+                            </div>
+                            <span style="font-size: 0.8rem; color: var(--text-muted);">14.0+</span>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-legend" style="display: flex; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 0.8rem; color: var(--text-muted); margin-top: 1rem;">
+                        <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #10b981;"></div>Low/Healthy</div>
+                        <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #facc15;"></div>Caution/Borderline</div>
+                        <div style="display: flex; align-items: center; gap: 5px;"><div style="width: 10px; height: 10px; border-radius: 50%; background: #ef4444;"></div>High/Diabetic</div>
+                    </div>
+                </div>
+
+                <!-- Card 8: Diabetes Risk Score -->
+                <div class="chart-container" style="justify-content: center;">
+                    <h4 class="chart-title" style="text-align: center; margin-bottom: 2rem;">Diabetes Risk Score</h4>
+                    
+                    <div id="percentile-large-text" style="font-size: 3rem; font-weight: 700; color: #0ea5e9; text-align: center; margin-bottom: 1rem;">6.5</div>
+                    
+                    <div style="width: 100%; position: relative; margin-bottom: 1rem;">
+                        <div style="height: 16px; border-radius: 8px; background: linear-gradient(90deg, #10b981, #facc15, #ef4444);"></div>
+                        <div id="marker-percentile" style="position: absolute; top: -6px; width: 6px; height: 28px; background: white; border-radius: 3px; left: 65%; transform: translateX(-50%); box-shadow: 0 2px 6px rgba(0,0,0,0.4); transition: left 0.5s ease;"></div>
+                        <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.8rem; color: var(--text-muted);">
+                            <span>Lower Risk</span>
+                            <span>Higher Risk</span>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: auto; text-align: center; font-size: 0.95rem; color: var(--text-muted); line-height: 1.6;">
+                        <span id="percentile-desc-text"></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="no-data-msg" class="hidden" style="text-align: center; padding: 2rem; color: var(--text-muted);">
+                <p>No analytical data found. Please run an analysis first.</p>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
+    <script src="analytics.js"></script>
+</body>
+</html>
