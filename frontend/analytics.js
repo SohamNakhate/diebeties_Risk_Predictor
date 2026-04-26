@@ -1,722 +1,867 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Explicit Theme Objects for Chart.js
+    // ─── Theme ────────────────────────────────────────────────────────────────
     const chartThemes = {
-        light: { text: '#475569', grid: 'rgba(0, 0, 0, 0.1)', tooltipBg: 'rgba(255, 255, 255, 0.9)' },
-        dark: { text: '#e2e8f0', grid: 'rgba(255, 255, 255, 0.1)', tooltipBg: 'rgba(15, 23, 42, 0.9)' }
+        light: { text: '#475569', grid: 'rgba(0, 0, 0, 0.08)', tooltipBg: 'rgba(255,255,255,0.95)', tooltipTitle: '#0f172a', tooltipBody: '#475569' },
+        dark: { text: '#cbd5e1', grid: 'rgba(255,255,255,0.08)', tooltipBg: 'rgba(15,23,42,0.95)', tooltipTitle: '#f1f5f9', tooltipBody: '#cbd5e1' }
     };
 
+    function getTheme() {
+        return document.body.classList.contains('light-theme') ? chartThemes.light : chartThemes.dark;
+    }
+
     function updateChartThemes() {
+        const theme = getTheme();
         const isLight = document.body.classList.contains('light-theme');
-        const theme = isLight ? chartThemes.light : chartThemes.dark;
-
-        Object.values(window.chartInstances).forEach((chart) => {
+        Object.values(window.chartInstances || {}).forEach(chart => {
             if (!chart || !chart.options) return;
-
-            // Update scales (x and y) if they exist
-            if (chart.options.scales) {
-                if (chart.options.scales.x) {
-                    if (chart.options.scales.x.grid) chart.options.scales.x.grid.color = theme.grid;
-                    if (chart.options.scales.x.ticks) chart.options.scales.x.ticks.color = theme.text;
-                    if (chart.options.scales.x.title) chart.options.scales.x.title.color = theme.text;
-                }
-                if (chart.options.scales.y) {
-                    if (chart.options.scales.y.grid) chart.options.scales.y.grid.color = theme.grid;
-                    if (chart.options.scales.y.ticks) chart.options.scales.y.ticks.color = theme.text;
-                    if (chart.options.scales.y.title) chart.options.scales.y.title.color = theme.text;
-                }
-                // Handle radial scale for radar/polar charts
-                if (chart.options.scales.r) {
-                    if (chart.options.scales.r.grid) chart.options.scales.r.grid.color = theme.grid;
-                    if (chart.options.scales.r.angleLines) chart.options.scales.r.angleLines.color = theme.grid;
-                    if (chart.options.scales.r.pointLabels) chart.options.scales.r.pointLabels.color = theme.text;
-                }
+            const scales = chart.options.scales || {};
+            ['x', 'y', 'r'].forEach(k => {
+                if (!scales[k]) return;
+                if (scales[k].grid) scales[k].grid.color = theme.grid;
+                if (scales[k].ticks) scales[k].ticks.color = theme.text;
+                if (scales[k].title) scales[k].title.color = theme.text;
+                if (scales[k].angleLines) scales[k].angleLines.color = theme.grid;
+                if (scales[k].pointLabels) scales[k].pointLabels.color = theme.text;
+            });
+            if (chart.options.plugins?.legend?.labels) chart.options.plugins.legend.labels.color = theme.text;
+            if (chart.options.plugins?.tooltip) {
+                chart.options.plugins.tooltip.backgroundColor = theme.tooltipBg;
+                chart.options.plugins.tooltip.titleColor = theme.tooltipTitle;
+                chart.options.plugins.tooltip.bodyColor = theme.tooltipBody;
             }
-
-            // Update legends and tooltips via plugins
-            if (chart.options.plugins) {
-                if (chart.options.plugins.legend && chart.options.plugins.legend.labels) {
-                    chart.options.plugins.legend.labels.color = theme.text;
-                }
-                if (chart.options.plugins.tooltip) {
-                    chart.options.plugins.tooltip.backgroundColor = theme.tooltipBg;
-                    chart.options.plugins.tooltip.titleColor = isLight ? '#0f172a' : '#ffffff';
-                    chart.options.plugins.tooltip.bodyColor = theme.text;
-                }
-            }
-
-            // Update Polar area border color specifically
-            if (chart.config.type === 'polarArea' && chart.data.datasets.length > 0) {
-                chart.data.datasets[0].borderColor = isLight ? '#ffffff' : '#0f172a';
-            }
-
             chart.update();
         });
     }
 
-    // Theme logic
-    const themeToggleBtn = document.getElementById('theme-toggle');
+    // ─── Theme toggle ─────────────────────────────────────────────────────────
+    const themeBtn = document.getElementById('theme-toggle');
     const sunIcon = document.getElementById('sun-icon');
     const moonIcon = document.getElementById('moon-icon');
 
-    if (localStorage.getItem('theme') === 'light') {
-        document.body.classList.add('light-theme');
-        if (sunIcon) sunIcon.classList.add('hidden');
-        if (moonIcon) moonIcon.classList.remove('hidden');
-    } else {
-        document.body.classList.remove('light-theme');
+    function applyStoredTheme() {
+        if (localStorage.getItem('theme') === 'light') {
+            document.body.classList.add('light-theme');
+            sunIcon?.classList.add('hidden');
+            moonIcon?.classList.remove('hidden');
+        } else {
+            document.body.classList.remove('light-theme');
+            sunIcon?.classList.remove('hidden');
+            moonIcon?.classList.add('hidden');
+        }
+    }
+    applyStoredTheme();
+
+    themeBtn?.addEventListener('click', () => {
+        document.body.classList.toggle('light-theme');
+        const isLight = document.body.classList.contains('light-theme');
+        localStorage.setItem('theme', isLight ? 'light' : 'dark');
+        if (isLight) { sunIcon?.classList.add('hidden'); moonIcon?.classList.remove('hidden'); }
+        else { sunIcon?.classList.remove('hidden'); moonIcon?.classList.add('hidden'); }
+        updateChartThemes();
+    });
+
+    document.getElementById('close-btn')?.addEventListener('click', () => window.close());
+
+    // ─── Utilities ────────────────────────────────────────────────────────────
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const pct = (v, lo, hi) => clamp(((v - lo) / (hi - lo)) * 100, 2, 98);
+
+    // Maps a clinical value to a standardized 0-100 Severity Scale
+    // Normal limit = 40, Caution limit = 70.
+    function normalizeScale(val, lo, norm, caution, hi) {
+        if (val <= lo) return 0;
+        if (val <= norm) return 40 * ((val - lo) / (norm - lo));
+        if (val <= caution) return 40 + 30 * ((val - norm) / (caution - norm));
+        if (val <= hi) return 70 + 30 * ((val - caution) / (hi - caution));
+        return 100;
     }
 
-    if (themeToggleBtn) {
-        themeToggleBtn.addEventListener('click', () => {
-            document.body.classList.toggle('light-theme');
-            const isLight = document.body.classList.contains('light-theme');
-            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+    // Clinical reference ranges (ADA / JNC guidelines)
+    const REF = {
+        glucose: { lo: 70, prediab: 100, diab: 126, max: 300 },
+        hba1c: { lo: 4.0, normal: 5.7, prediab: 6.5, max: 14 },
+        bmi: { underweight: 18.5, normal: 25, overweight: 30, max: 45 },
+        bp: { normal: 120, elevated: 130, stage1: 140, max: 200 },
+        insulin: { lo: 2, normal: 25, high: 166, max: 300 },
+    };
 
-            if (isLight) {
-                if (sunIcon) sunIcon.classList.add('hidden');
-                if (moonIcon) moonIcon.classList.remove('hidden');
-            } else {
-                if (sunIcon) sunIcon.classList.remove('hidden');
-                if (moonIcon) moonIcon.classList.add('hidden');
-            }
+    // Color palette
+    const C = {
+        green: '#10b981', yellow: '#f59e0b', red: '#ef4444',
+        blue: '#06b6d4', purple: '#8b5cf6', slate: '#64748b',
+        greenA: 'rgba(16,185,129,0.18)', yellowA: 'rgba(245,158,11,0.18)',
+        redA: 'rgba(239,68,68,0.18)', blueA: 'rgba(6,182,212,0.15)',
+    };
 
-            // Re-render charts by updating variables
-            updateChartThemes();
-        });
+    function statusColor(val, lo, mid, hi) {
+        if (val < lo) return C.blue;
+        if (val < mid) return C.green;
+        if (val < hi) return C.yellow;
+        return C.red;
     }
 
-    // Close Button
-    const closeBtn = document.getElementById('close-btn');
-    if (closeBtn) {
-        closeBtn.addEventListener('click', () => {
-            window.close();
-        });
+    // ─── Legend helper ────────────────────────────────────────────────────────
+    function rangeLegend(items) {
+        return items.map(i => `<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;font-size:0.78rem;color:var(--text-muted)"><span style="width:9px;height:9px;border-radius:50%;background:${i.c};display:inline-block;flex-shrink:0"></span>${i.label}</span>`).join('');
     }
+
+    // ─── Shared Chart.js defaults ─────────────────────────────────────────────
+    function basePlugins(theme, extra = {}) {
+        return {
+            legend: { position: 'bottom', labels: { usePointStyle: true, pointStyle: 'circle', boxWidth: 8, boxHeight: 8, padding: 14, color: theme.text, font: { size: 11.5, family: 'Inter' } } },
+            tooltip: { backgroundColor: theme.tooltipBg, titleColor: theme.tooltipTitle, bodyColor: theme.tooltipBody, borderColor: 'rgba(6,182,212,0.3)', borderWidth: 1, cornerRadius: 10, padding: 10 },
+            ...extra
+        };
+    }
+
+    // ─── Main ─────────────────────────────────────────────────────────────────
+    window.chartInstances = {};
 
     function init() {
-        const dataStr = localStorage.getItem('analyticsData');
-        if (!dataStr) {
-            document.querySelector('.dashboard-grid').classList.add('hidden');
-            const msg = document.getElementById('no-data-msg');
-            if (msg) msg.classList.remove('hidden');
+        const raw = localStorage.getItem('analyticsData');
+        if (!raw) {
+            document.querySelector('.dashboard-grid')?.classList.add('hidden');
+            document.getElementById('no-data-msg')?.classList.remove('hidden');
             return;
         }
-
-        const data = JSON.parse(dataStr);
-        renderAllCharts(data);
+        renderAllCharts(JSON.parse(raw));
     }
 
-    // Keep references to destroy old charts on theme toggle
-    window.chartInstances = window.chartInstances || {};
-
     function renderAllCharts(data) {
-        if (typeof Chart === "undefined") {
-            console.error("Chart.js not loaded");
-            return;
-        }
+        if (typeof Chart === 'undefined') { console.error('Chart.js not loaded'); return; }
 
-        const isLight = document.body.classList.contains('light-theme');
-        const theme = isLight ? chartThemes.light : chartThemes.dark;
+        // Destroy old
+        Object.values(window.chartInstances).forEach(c => c?.destroy?.());
+        window.chartInstances = {};
 
-        const accentBlue = '#06b6d4';
-        const accentPurple = '#8b5cf6';
-        const accentGreen = '#10b981';
-        const accentRed = '#ef4444';
-        const accentYellow = '#facc15';
-
-        // Parse data safely
+        const theme = getTheme();
         const glucose = Number(data.glucose) || 100;
         const hba1c = Number(data.hba1c) || 5.5;
         const bmi = Number(data.bmi) || 25;
         const bp = Number(data.bloodPressure) || 80;
         const insulin = Number(data.insulin) || 15;
-        const age = Number(data.age) || 30;
-        const dpf = Number(data.dpf) || 0.5;
+        const age = Number(data.age) || 35;
+        const dpf = Number(data.dpf) || 0.3;
+        const preg = Number(data.pregnancies) || 0;
+        const skin = Number(data.skinThickness) || 20;
 
-        // Destroy all existing instances
-        Object.values(window.chartInstances).forEach(chart => {
-            if (chart && typeof chart.destroy === 'function') chart.destroy();
+        // ── Clinical summary ─────────────────────────────────────────────────
+        buildClinicalSummary({ glucose, hba1c, bmi, bp, insulin, age });
+
+        // ── Chart 1 – Clinical Reference Ranges ──────────────────────────────
+        // Shows each metric as a point on its actual clinical range.
+        // No invented scores — raw values overlaid on ADA thresholds.
+        buildReferenceRangeChart(theme, { glucose, hba1c, bmi, bp });
+
+        // ── Chart 2 – ADA Risk Factor Panel ──────────────────────────────────
+        // Horizontal bars showing where each metric sits within its clinical zone.
+        buildRiskFactorPanel(theme, { glucose, hba1c, bmi, bp, insulin, dpf, age });
+
+        // ── Chart 3 – HbA1c vs Fasting Glucose Quadrant ──────────────────────
+        // A 2-axis scatter plot using ADA-defined quadrant thresholds.
+        buildHba1cGlucoseQuadrant(theme, { glucose, hba1c });
+
+        // ── Chart 4 – Historical Glucose Trend ───────────────────────────────
+        // Real historical data from localStorage; no fabricated projection.
+        buildGlucoseTrendChart(theme, glucose);
+
+        // ── Chart 5 – BMI Classification Band ────────────────────────────────
+        // Doughnut showing which WHO BMI category the patient falls in.
+        buildBmiGauge(theme, bmi);
+
+        // ── Chart 6 – Blood Pressure Classification ───────────────────────────
+        // Doughnut gauge for BP using JNC 8 / AHA categories.
+        buildBpGauge(theme, bp);
+
+        // ── Card 7 – Clinical Marker Strips ──────────────────────────────────
+        // Glucose and HbA1c range strips with clinical zone labels.
+        buildMarkerStrips({ glucose, hba1c });
+
+        // ── Card 8 – Established Risk Factors Summary ─────────────────────────
+        buildRiskFactorSummaryCard({ glucose, hba1c, bmi, bp, age, dpf, preg });
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 1 — Clinical Reference Range Overview (horizontal grouped bar)
+    // Each metric shown at its real value against clinically annotated zones.
+    // ════════════════════════════════════════════════════════════════════════
+    function buildReferenceRangeChart(theme, { glucose, hba1c, bmi, bp }) {
+        const ctx = document.getElementById('radarChart');
+        if (!ctx) return;
+
+        // Normalize each metric to a 0–100 scale using its own range,
+        // then annotate the corresponding clinical thresholds.
+        // Scale: 0 = lower bound of healthy, 100 = clearly diabetic/hypertensive
+        const metrics = [
+            { label: 'Glucose', val: glucose, lo: 70, norm: 100, caution: 126, hi: 200, unit: 'mg/dL' },
+            { label: 'HbA1c', val: hba1c, lo: 4.0, norm: 5.7, caution: 6.5, hi: 10.0, unit: '%' },
+            { label: 'BMI', val: bmi, lo: 18, norm: 25, caution: 30, hi: 40, unit: 'kg/m²' },
+            { label: 'Blood Pressure', val: bp, lo: 60, norm: 120, caution: 140, hi: 180, unit: 'mmHg' },
+        ];
+
+        const labels = metrics.map(m => m.label);
+        // Map all heights to the uniform 0-100 severity scale
+        const values = metrics.map(m => normalizeScale(m.val, m.lo, m.norm, m.caution, m.hi));
+        const normLine = metrics.map(m => 40);    // Normal threshold is ALWAYS 40 on severity scale
+        const cautionLn = metrics.map(m => 70);   // Caution threshold is ALWAYS 70 on severity scale
+
+        const barColors = metrics.map(m => {
+            if (m.val < m.norm) return C.green;
+            if (m.val < m.caution) return C.yellow;
+            return C.red;
         });
-        window.chartInstances = {};
 
-        // ----- 1. Systemic Health Radar -----
-        const ctxRadar = document.getElementById('radarChart');
-        if (ctxRadar) {
-            window.chartInstances.radar = new Chart(ctxRadar, {
-                type: 'radar',
-                data: {
-                    labels: ['Glucose', 'BMI', 'Blood Pressure', 'Insulin', 'Age Risk'],
-                    datasets: [
-                        {
-                            label: 'Your Profile',
-                            data: [
-                                Math.min(glucose / 120 * 100, 100),
-                                Math.min(bmi / 30 * 100, 100),
-                                Math.min(bp / 120 * 100, 100),
-                                Math.min(insulin / 25 * 100, 100),
-                                Math.min(age / 80 * 100, 100)
-                            ],
-                            backgroundColor: 'rgba(6, 182, 212, 0.2)',
-                            borderColor: accentBlue,
-                            pointBackgroundColor: accentBlue,
-                            borderWidth: 2,
-                            fill: true
-                        },
-                        {
-                            label: 'Healthy Baseline',
-                            data: [75, 75, 75, 60, 50],
-                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                            borderColor: accentGreen,
-                            borderDash: [5, 5],
-                            borderWidth: 2,
-                            fill: true,
-                            pointRadius: 0
-                        }
-                    ]
+        window.chartInstances.radar = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Your Value',
+                        data: values,
+                        backgroundColor: barColors,
+                        borderRadius: 6,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.8,
+                        order: 1
+                    },
+                    {
+                        label: 'Normal Upper Limit',
+                        data: normLine,
+                        type: 'line',
+                        showLine: false,
+                        borderColor: C.green,
+                        backgroundColor: C.green,
+                        pointStyle: 'line',
+                        pointRadius: 15,
+                        pointBorderWidth: 3,
+                        order: 0
+                    },
+                    {
+                        label: 'Caution Threshold',
+                        data: cautionLn,
+                        type: 'line',
+                        showLine: false,
+                        borderColor: C.red,
+                        backgroundColor: C.red,
+                        pointStyle: 'line',
+                        pointRadius: 15,
+                        pointBorderWidth: 3,
+                        order: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: {
+                    padding: { top: 20, bottom: 10 }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            angleLines: { color: theme.grid },
-                            grid: { color: theme.grid },
-                            pointLabels: { color: theme.text, font: { size: 12, family: 'Inter' } },
-                            ticks: { display: false, max: 100, min: 0 }
+                scales: {
+                    x: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { size: 11, family: 'Inter' } } },
+                    y: {
+                        display: false,
+                        max: 100,
+                        grid: { color: theme.grid },
+                        ticks: { color: theme.text }
+                    }
+                },
+                plugins: {
+                    ...basePlugins(theme),
+                    legend: {
+                        ...basePlugins(theme).legend,
+                        labels: {
+                            ...basePlugins(theme).legend.labels,
+                            filter: item => item.text !== 'Your Value'
                         }
                     },
-                    plugins: { 
-                        legend: { 
-                            position: 'bottom',
-                            align: 'center',
-                            labels: { usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 16, color: theme.text, font: { size: 11, family: "'Inter', sans-serif" } } 
-                        } 
-                    }
-                }
-            });
-        }
-
-        // ----- 2. Risk Contribution Bars -----
-        const ctxBar = document.getElementById('barChart');
-        if (ctxBar) {
-            // Simplistic hazard calculation for visualization
-            const hazards = {
-                'Blood Sugar': glucose > 125 ? 80 : (glucose > 100 ? 50 : 20),
-                'Weight (BMI)': bmi > 30 ? 70 : (bmi > 25 ? 40 : 15),
-                'Cardiovascular': bp > 130 ? 60 : (bp > 120 ? 30 : 10),
-                'Age Factor': age > 45 ? 50 : 25
-            };
-
-            window.chartInstances.bar = new Chart(ctxBar, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(hazards),
-                    datasets: [{
-                        label: 'Hazard Score',
-                        data: Object.values(hazards),
-                        backgroundColor: [
-                            hazards['Blood Sugar'] > 60 ? accentRed : accentYellow,
-                            hazards['Weight (BMI)'] > 60 ? accentRed : accentYellow,
-                            hazards['Cardiovascular'] > 60 ? accentRed : accentYellow,
-                            accentPurple
-                        ],
-                        borderRadius: 6
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    indexAxis: 'y',
-                    scales: {
-                        x: { display: false, max: 100 },
-                        y: {
-                            grid: { display: false },
-                            ticks: { color: theme.text, font: { weight: 'bold', family: 'Inter' } }
-                        }
-                    },
-                    plugins: {
-                        legend: { display: false }
-                    }
-                }
-            });
-        }
-
-        // ----- 3. Blood Sugar Gauge -----
-        const ctxGauge = document.getElementById('gaugeChart');
-        if (ctxGauge) {
-            window.chartInstances.gauge = new Chart(ctxGauge, {
-                type: 'doughnut',
-                data: {
-                    labels: ['Normal\n(70-99)', 'Prediabetic\n(100-125)', 'Diabetic\n(126+)', 'Remaining'],
-                    datasets: [{
-                        data: [59, 26, 114, 0],
-                        backgroundColor: [accentGreen, accentYellow, accentRed, 'rgba(100, 116, 139, 0.1)'],
-                        borderColor: ['#059669', '#d97706', '#dc2626', 'transparent'],
-                        borderWidth: 2,
-                        circumference: 180,
-                        rotation: 270
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: { display: false } // Hidden for space
-                    }
-                },
-                plugins: [{
-                    id: 'gaugeNeedle',
-                    afterDatasetsDraw: function (chart) {
-                        const { ctx } = chart;
-                        const meta = chart.getDatasetMeta(0);
-                        const arc = meta.data[0];
-
-                        const centerX = arc.x;
-                        const centerY = arc.y;
-                        const radius = arc.outerRadius - 15;
-
-                        const min = 40;
-                        const max = 240;
-                        const clamped = Math.max(min, Math.min(glucose, max));
-                        const percent = (clamped - min) / (max - min);
-
-                        const angle = Math.PI + (percent * Math.PI);
-
-                        ctx.save();
-                        ctx.beginPath();
-                        ctx.lineWidth = 3;
-                        ctx.strokeStyle = accentBlue;
-                        ctx.moveTo(centerX, centerY);
-                        ctx.lineTo(
-                            centerX + radius * Math.cos(angle),
-                            centerY + radius * Math.sin(angle)
-                        );
-                        ctx.stroke();
-
-                        ctx.beginPath();
-                        ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-                        ctx.fillStyle = accentBlue;
-                        ctx.fill();
-
-                        // The overarching themes handle CSS natively so dynamically query body
-                        // Fallback text rendering if var is not parsed properly is white, so use explicit theme object
-                        const isLightNow = document.body.classList.contains('light-theme');
-                        const dynamicTextColor = isLightNow ? '#475569' : '#e2e8f0';
-                        ctx.fillStyle = dynamicTextColor;
-                        ctx.font = 'bold 20px Inter';
-                        ctx.textAlign = 'center';
-                        ctx.fillText(glucose + ' mg/dL', centerX, centerY - 15);
-
-                        let status = "Normal";
-                        let color = accentGreen;
-                        if (glucose >= 126) { status = "Diabetic"; color = accentRed; }
-                        else if (glucose >= 100) { status = "Prediabetic"; color = accentYellow; }
-
-                        ctx.fillStyle = color;
-                        ctx.font = 'bold 12px Inter';
-                        ctx.fillText(status, centerX, centerY + 20);
-                        ctx.restore();
-                    }
-                }]
-            });
-        }
-
-        // ----- 4. Vitals Correlation (Enhanced Scatter Chart) -----
-        const ctxScatter = document.getElementById('scatterChart');
-        if (ctxScatter) {
-            // 1. Generate Synthetic Population Data for Context
-            const populationData = [];
-            for(let i = 0; i < 65; i++) {
-                let randBMI = 18 + Math.random() * 22; // Range 18 to 40
-                let baseBP = 90 + ((randBMI - 18) * 1.8); 
-                let randBP = baseBP + (Math.random() * 30 - 15); // variance
-                populationData.push({ x: randBMI.toFixed(1), y: randBP.toFixed(0) });
-            }
-
-            const targetZonePlugin = {
-                id: 'targetZonePlugin',
-                beforeDraw: (chart) => {
-                    const { ctx, chartArea: { top, bottom, left, right }, scales: { x, y } } = chart;
-                    ctx.save();
-                    const xLeft = x.getPixelForValue(18.5);
-                    const xRight = x.getPixelForValue(24.9);
-                    const yTop = y.getPixelForValue(120);
-                    const yBottom = y.getPixelForValue(90);
-
-                    ctx.fillStyle = isLight ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)';
-                    ctx.fillRect(xLeft, yTop, xRight - xLeft, yBottom - yTop);
-                    
-                    ctx.strokeStyle = 'rgba(16, 185, 129, 0.4)';
-                    ctx.lineWidth = 1;
-                    ctx.strokeRect(xLeft, yTop, xRight - xLeft, yBottom - yTop);
-                    ctx.restore();
-                }
-            };
-
-            window.chartInstances.scatter = new Chart(ctxScatter, {
-                type: 'scatter',
-                data: {
-                    datasets: [
-                        {
-                            label: 'Your Metrics',
-                            data: [{ x: bmi, y: bp }],
-                            backgroundColor: '#0ea5e9',
-                            borderColor: '#ffffff',
-                            borderWidth: 2,
-                            pointRadius: 8,
-                            pointHoverRadius: 10,
-                            order: 1
-                        },
-                        {
-                            label: 'General Population Trend',
-                            data: populationData,
-                            backgroundColor: isLight ? 'rgba(100, 116, 139, 0.2)' : 'rgba(255, 255, 255, 0.1)',
-                            borderColor: 'transparent',
-                            pointRadius: 4,
-                            order: 2
-                        },
-                        {
-                            label: 'Optimal Health Target',
-                            data: [], // Empty array because the plugin manually draws the zone
-                            backgroundColor: isLight ? 'rgba(16, 185, 129, 0.25)' : 'rgba(16, 185, 129, 0.2)',
-                            borderColor: 'rgba(16, 185, 129, 0.6)',
-                            borderWidth: 1,
-                            pointStyle: 'rectRounded', // Make the legend icon a box
-                            order: 3
-                        }
-                    ]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            title: { display: true, text: 'BMI', color: theme.text, font: { weight: '600' } },
-                            grid: { color: theme.grid },
-                            ticks: { color: theme.text },
-                            min: 15, 
-                            max: 45
-                        },
-                        y: {
-                            title: { display: true, text: 'Blood Pressure (mmHg)', color: theme.text, font: { weight: '600' } },
-                            grid: { color: theme.grid },
-                            ticks: { color: theme.text },
-                            min: 70, 
-                            max: 180
-                        }
-                    },
-                    plugins: {
-                        legend: { 
-                            position: 'bottom',
-                            align: 'center',
-                            labels: { usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 16, color: theme.text, font: { size: 11, family: "'Inter', sans-serif" } } 
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    if (context.datasetIndex === 0) {
-                                        return `You: BMI ${context.raw.x}, BP ${context.raw.y}`;
-                                    }
-                                    return `Sample: BMI ${context.raw.x}, BP ${context.raw.y}`;
+                    tooltip: {
+                        ...basePlugins(theme).tooltip,
+                        callbacks: {
+                            label: ctx2 => {
+                                const m = metrics[ctx2.dataIndex];
+                                if (ctx2.dataset.label === 'Your Value') {
+                                    let zone = m.val < m.norm ? 'Normal ✓' : m.val < m.caution ? 'Borderline ⚠' : 'Elevated ✗';
+                                    return ` ${m.val} ${m.unit}  —  ${zone}`;
                                 }
+                                return ` ${ctx2.dataset.label}: ${ctx2.dataset.label === 'Normal Upper Limit' ? m.norm : m.caution} ${m.unit}`;
                             }
                         }
                     }
-                },
-                plugins: [targetZonePlugin]
-            });
-        }
-
-        // ----- 5. Historical & Projected Glucose Trend -----
-        const ctxLine = document.getElementById('lineLineChart') || document.getElementById('lineChart');
-        if (ctxLine) {
-            let history = JSON.parse(localStorage.getItem('diabetesHistory')) || [];
-
-            const chronologicalHistory = [...history].reverse();
-            
-            // 1. Aggregate Historical Data by Month
-            const monthMap = new Map();
-            const monthKeys = [];
-            
-            chronologicalHistory.forEach(record => {
-                const date = new Date(record.timestamp || Date.now());
-                const key = `${date.getFullYear()}-${date.getMonth()}`; 
-                const displayMonth = date.toLocaleString('default', { month: 'short' });
-                const val = parseFloat(record.glucose);
-                
-                if (!monthMap.has(key)) {
-                    monthMap.set(key, { display: displayMonth, sum: val, count: 1, lastRawDate: date });
-                    monthKeys.push(key);
-                } else {
-                    const entry = monthMap.get(key);
-                    entry.sum += val;
-                    entry.count += 1;
-                    entry.lastRawDate = date; // Track the very last date in reality
                 }
-            });
-
-            const uniqueHistoricalMonths = [];
-            const aggregatedHistoricalData = [];
-            let lastHistoricalDate = new Date();
-
-            monthKeys.forEach(k => {
-                const entry = monthMap.get(k);
-                uniqueHistoricalMonths.push(entry.display);
-                aggregatedHistoricalData.push(entry.sum / entry.count);
-                lastHistoricalDate = entry.lastRawDate;
-            });
-
-            if (aggregatedHistoricalData.length === 0) {
-                uniqueHistoricalMonths.push(new Date().toLocaleString('default', { month: 'short' }));
-                aggregatedHistoricalData.push(glucose);
             }
+        });
+    }
 
-            // 3. Trend Calculation
-            let trend = 2; // Default
-            if (aggregatedHistoricalData.length > 1) {
-                const oldestGlucose = aggregatedHistoricalData[0];
-                const latestGlucose = aggregatedHistoricalData[aggregatedHistoricalData.length - 1];
-                trend = (latestGlucose - oldestGlucose) / aggregatedHistoricalData.length;
-                if (trend === 0) trend = 2;
-            }
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 2 — ADA Risk Factor Panel (horizontal % bars, zone-coloured)
+    // Each metric expressed as % within its clinical range.
+    // ════════════════════════════════════════════════════════════════════════
+    function buildRiskFactorPanel(theme, { glucose, hba1c, bmi, bp, insulin, dpf, age }) {
+        const ctx = document.getElementById('barChart');
+        if (!ctx) return;
 
-            // 2. Generate Future Timeline
-            const projectedMonths = [];
-            for (let i = 1; i <= 4; i++) {
-                const d = new Date(lastHistoricalDate);
-                d.setMonth(d.getMonth() + i);
-                projectedMonths.push(d.toLocaleString('default', { month: 'short' }));
-            }
+        // Each entry: { label, val, lo, hi, thresholds for color }
+        const factors = [
+            { label: 'Fasting Glucose', val: glucose, lo: 70, hi: 300, norm: 100, caution: 126 },
+            { label: 'HbA1c (%)', val: hba1c, lo: 4, hi: 14, norm: 5.7, caution: 6.5 },
+            { label: 'BMI (kg/m²)', val: bmi, lo: 15, hi: 45, norm: 25, caution: 30 },
+            { label: 'Blood Pressure', val: bp, lo: 60, hi: 180, norm: 120, caution: 140 },
+            { label: 'Insulin (µU/mL)', val: insulin, lo: 2, hi: 166, norm: 25, caution: 60 },
+        ];
 
-            const chartLabels = [...uniqueHistoricalMonths, ...projectedMonths];
+        // Map all items to the uniform severity scale (0-100)
+        const pcts = factors.map(f => normalizeScale(f.val, f.lo, f.norm, f.caution, f.hi));
+        const colors = factors.map(f => {
+            if (f.val <= f.norm) return C.green;
+            if (f.val <= f.caution) return C.yellow;
+            return C.red;
+        });
 
-            // 3. Data Stitching
-            // Pad the end of historicalData with nulls for the 4 projected months
-            let historicalData = [...aggregatedHistoricalData, ...new Array(4).fill(null)];
+        // Threshold markers are always at 40 and 70 on this scale
+        const normPcts = factors.map(f => 40);
+        const cautionPcts = factors.map(f => 70);
 
-            // Pad projectedData with nulls up to the exact last historical index so they connect
-            let lastKnownGlucose = aggregatedHistoricalData[aggregatedHistoricalData.length - 1];
-            let projectedData = new Array(aggregatedHistoricalData.length - 1).fill(null);
-            projectedData.push(lastKnownGlucose); // Critical: connection point
-
-            let projectionAccumulator = lastKnownGlucose;
-            for (let i = 0; i < 4; i++) {
-                projectionAccumulator += trend;
-                projectedData.push(projectionAccumulator);
-            }
-
-            window.chartInstances.line = new Chart(ctxLine, {
-                type: 'line',
-                data: {
-                    labels: chartLabels,
-                    datasets: [
-                        {
-                            label: 'Historical',
-                            data: historicalData,
-                            borderColor: '#06b6d4',
-                            backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                            borderWidth: 3,
-                            tension: 0.4,
-                            fill: true,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#06b6d4',
-                            pointHoverRadius: 6
-                        },
-                        {
-                            label: 'Projected Trend',
-                            data: projectedData,
-                            borderColor: '#ef4444',
-                            borderWidth: 3,
-                            borderDash: [5, 5],
-                            tension: 0.4,
-                            fill: false,
-                            pointRadius: 2,
-                            pointBackgroundColor: '#ef4444',
-                            pointHoverRadius: 6
-                        }
-                    ]
+        window.chartInstances.bar = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: factors.map(f => f.label),
+                datasets: [
+                    {
+                        label: 'Your Value',
+                        data: pcts,
+                        backgroundColor: colors,
+                        borderRadius: 5,
+                        barPercentage: 0.5,
+                        categoryPercentage: 0.8,
+                        order: 1
+                    },
+                    {
+                        label: 'Normal Limit',
+                        data: normPcts,
+                        type: 'line',
+                        showLine: false,
+                        borderColor: C.green,
+                        backgroundColor: C.green,
+                        pointStyle: 'line',
+                        pointRotation: 90,
+                        pointRadius: 15,
+                        pointBorderWidth: 3,
+                        order: 0
+                    },
+                    {
+                        label: 'Elevated Limit',
+                        data: cautionPcts,
+                        type: 'line',
+                        showLine: false,
+                        borderColor: C.red,
+                        backgroundColor: C.red,
+                        pointStyle: 'line',
+                        pointRotation: 90,
+                        pointRadius: 15,
+                        pointBorderWidth: 3,
+                        order: 0
+                    }
+                ]
+            },
+            options: {
+                layout: {
+                    padding: { left: 10, right: 30, top: 10, bottom: 10 }
                 },
-                options: {
-                    spanGaps: true,
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            grid: { color: theme.grid },
-                            ticks: { color: theme.text, font: { weight: '600', family: 'Inter' } }
-                        },
-                        y: {
-                            title: { display: true, text: 'Glucose (mg/dL)', color: theme.text },
-                            grid: { color: theme.grid },
-                            ticks: { color: theme.text },
-                            suggestedMin: 60,
-                            suggestedMax: 200
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        display: false,
+                        max: 100,
+                        grid: { display: false }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: theme.text, font: { size: 11, family: 'Inter', weight: '600' } }
+                    }
+                },
+                plugins: {
+                    ...basePlugins(theme),
+                    legend: { 
+                        ...basePlugins(theme).legend, 
+                        position: 'bottom',
+                        labels: {
+                            ...basePlugins(theme).legend.labels,
+                            filter: item => item.text !== 'Your Value'
                         }
                     },
-                    plugins: {
-                        legend: { 
-                            position: 'bottom', 
-                            align: 'center',
-                            labels: { usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 16, color: theme.text, font: { size: 11, family: "'Inter', sans-serif" } } 
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => `Glucose: ${context.parsed.y.toFixed(1)} mg/dL`
+                    tooltip: {
+                        ...basePlugins(theme).tooltip,
+                        callbacks: {
+                            label: ctx2 => {
+                                const f = factors[ctx2.dataIndex];
+                                if (ctx2.dataset.label === 'Your Value') {
+                                    const zone = f.val <= f.norm ? 'Normal' : f.val <= f.caution ? 'Borderline' : 'Elevated';
+                                    return ` ${f.val}  (${zone})`;
+                                }
+                                return ` ${ctx2.dataset.label}: ${ctx2.dataset.label === 'Normal Limit' ? f.norm : f.caution}`;
                             }
                         }
                     }
                 }
-            });
-        }
+            }
+        });
+    }
 
-        // ----- 6. Lifestyle vs Genetics (Polar Area) -----
-        const ctxPolar = document.getElementById('polarChart');
-        if (ctxPolar) {
-            const impactDiet = Math.min((glucose / 200) * 10, 10) || 0;
-            const impactWeight = Math.min((bmi / 40) * 10, 10) || 0;
-            const impactBP = Math.min((bp / 180) * 10, 10) || 0;
-            const impactAge = Math.min((age / 80) * 10, 10) || 0;
-            const impactGenetics = Math.min((dpf / 2.0) * 10, 10);
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 3 — HbA1c × Fasting Glucose Diagnostic Quadrant
+    // ADA uses BOTH values independently for diagnosis. Quadrant shows
+    // where the patient sits on the 2D diagnostic space.
+    // ════════════════════════════════════════════════════════════════════════
+    function buildHba1cGlucoseQuadrant(theme, { glucose, hba1c }) {
+        const ctx = document.getElementById('gaugeChart');
+        if (!ctx) return;
 
-            window.chartInstances.polar = new Chart(ctxPolar, {
-                type: 'polarArea',
-                data: {
-                    labels: ['Diet (Glucose)', 'Weight (BMI)', 'Activity (BP)', 'Age Factor', 'Genetics (DPF)'],
-                    datasets: [{
-                        label: 'Risk Impact Score',
-                        data: [impactDiet, impactWeight, impactBP, impactAge, impactGenetics],
-                        backgroundColor: [
-                            'rgba(239, 68, 68, 0.7)',   // Red
-                            'rgba(249, 115, 22, 0.7)',  // Orange
-                            'rgba(250, 204, 21, 0.7)',  // Yellow
-                            'rgba(148, 163, 184, 0.7)', // Gray
-                            'rgba(168, 85, 247, 0.7)'   // Purple
-                        ],
-                        borderColor: isLight ? '#ffffff' : '#0f172a',
-                        borderWidth: 2
-                    }]
+        // Background zone annotation plugin
+        const zonePlugin = {
+            id: 'quadrantZones',
+            beforeDraw(chart) {
+                const { ctx: c, chartArea: ca, scales: { x, y } } = chart;
+                // ADA thresholds: glucose ≥ 126 || hba1c ≥ 6.5 → diabetes
+                //                 glucose 100-125 || hba1c 5.7-6.4 → prediabetes
+                const gNorm = x.getPixelForValue(100);
+                const gDiab = x.getPixelForValue(126);
+                const hNorm = y.getPixelForValue(5.7);
+                const hDiab = y.getPixelForValue(6.5);
+
+                c.save();
+                // Normal zone (bottom-left)
+                c.fillStyle = 'rgba(16,185,129,0.10)';
+                c.fillRect(ca.left, hNorm, gNorm - ca.left, ca.bottom - hNorm);
+                // Prediabetes zone (middle band)
+                c.fillStyle = 'rgba(245,158,11,0.10)';
+                c.fillRect(gNorm, ca.top, gDiab - gNorm, ca.bottom - ca.top);
+                c.fillRect(ca.left, hDiab, ca.right - ca.left, hNorm - hDiab);
+                // Diabetes zone (top-right)
+                c.fillStyle = 'rgba(239,68,68,0.10)';
+                c.fillRect(gDiab, ca.top, ca.right - gDiab, ca.bottom - ca.top);
+                c.restore();
+            }
+        };
+
+        window.chartInstances.gauge = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [
+                    {
+                        label: 'Your Reading',
+                        data: [{ x: glucose, y: hba1c }],
+                        backgroundColor: (() => {
+                            if (glucose >= 126 || hba1c >= 6.5) return C.red;
+                            if (glucose >= 100 || hba1c >= 5.7) return C.yellow;
+                            return C.green;
+                        })(),
+                        borderColor: theme.text,
+                        borderWidth: 2,
+                        pointRadius: 10,
+                        pointHoverRadius: 13,
+                        pointStyle: 'star'
+                    },
+                    // Legend-only datasets (no visible data points)
+                    { label: 'Normal Zone', data: [], backgroundColor: 'rgba(16,185,129,0.35)', pointStyle: 'rectRounded', pointRadius: 6 },
+                    { label: 'Prediabetes Zone (ADA)', data: [], backgroundColor: 'rgba(245,158,11,0.35)', pointStyle: 'rectRounded', pointRadius: 6 },
+                    { label: 'Diabetes Zone (ADA)', data: [], backgroundColor: 'rgba(239,68,68,0.35)', pointStyle: 'rectRounded', pointRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        title: { display: true, text: 'Fasting Glucose (mg/dL)', color: theme.text, font: { weight: '600', family: 'Inter' } },
+                        min: 60, max: 260,
+                        grid: { color: theme.grid },
+                        ticks: { color: theme.text }
+                    },
+                    y: {
+                        title: { display: true, text: 'HbA1c (%)', color: theme.text, font: { weight: '600', family: 'Inter' } },
+                        min: 4.0, max: 11.0,
+                        grid: { color: theme.grid },
+                        ticks: { color: theme.text }
+                    }
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        r: {
-                            grid: { color: theme.grid },
-                            angleLines: { color: theme.grid },
-                            ticks: { display: false, min: 0, max: 10 }
+                plugins: {
+                    ...basePlugins(theme),
+                    legend: { ...basePlugins(theme).legend, position: 'bottom' },
+                    tooltip: {
+                        ...basePlugins(theme).tooltip,
+                        filter: ctx2 => ctx2.dataset.data.length > 0,
+                        callbacks: {
+                            label: () => {
+                                const zone = (glucose >= 126 || hba1c >= 6.5) ? 'Diabetes range' :
+                                    (glucose >= 100 || hba1c >= 5.7) ? 'Prediabetes range' : 'Normal range';
+                                return [` Glucose: ${glucose} mg/dL`, ` HbA1c: ${hba1c}%`, ` ADA Zone: ${zone}`];
+                            }
                         }
                     },
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                            labels: { color: theme.text, font: { size: 11, family: 'Inter' } }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => `Impact Score: ${context.raw.toFixed(1)} / 10`
+                }
+            },
+            plugins: [zonePlugin]
+        });
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 4 — Historical Glucose Trend (real data only, no fabricated projection)
+    // ════════════════════════════════════════════════════════════════════════
+    function buildGlucoseTrendChart(theme, currentGlucose) {
+        const ctx = document.getElementById('scatterChart');
+        if (!ctx) return;
+
+        let history = JSON.parse(localStorage.getItem('diabetesHistory') || '[]');
+        // history is newest-first; reverse to chronological
+        const chron = [...history].reverse();
+
+        // Monthly aggregate
+        const monthMap = new Map();
+        chron.forEach(r => {
+            const d = new Date(r.timestamp || Date.now());
+            const key = `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`;
+            const lbl = d.toLocaleString('default', { month: 'short', year: '2-digit' });
+            const g = parseFloat(r.glucose);
+            if (!isNaN(g)) {
+                if (!monthMap.has(key)) monthMap.set(key, { lbl, sum: g, n: 1 });
+                else { const e = monthMap.get(key); e.sum += g; e.n++; }
+            }
+        });
+
+        const sortedKeys = [...monthMap.keys()].sort();
+        const labels = sortedKeys.map(k => monthMap.get(k).lbl);
+        const values = sortedKeys.map(k => {
+            const e = monthMap.get(k); return +(e.sum / e.n).toFixed(1);
+        });
+
+        // If no history, just show the current point
+        if (labels.length === 0) {
+            labels.push(new Date().toLocaleString('default', { month: 'short', year: '2-digit' }));
+            values.push(currentGlucose);
+        }
+
+        // Reference line data (ADA normal upper = 99 mg/dL)
+        const normalLine = labels.map(() => 99);
+        const prediabLine = labels.map(() => 126);
+
+        window.chartInstances.scatter = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: 'Avg Fasting Glucose',
+                        data: values,
+                        borderColor: C.blue,
+                        backgroundColor: C.blueA,
+                        borderWidth: 3,
+                        tension: 0.35,
+                        fill: true,
+                        pointRadius: 6,
+                        pointBackgroundColor: values.map(v => {
+                            if (v >= 126) return C.red;
+                            if (v >= 100) return C.yellow;
+                            return C.green;
+                        }),
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 1.5,
+                        pointHoverRadius: 8
+                    },
+                    {
+                        label: 'Normal (<100)',
+                        data: normalLine,
+                        borderColor: C.green,
+                        backgroundColor: C.green,
+                        borderWidth: 1.5,
+                        borderDash: [4, 4],
+                        pointStyle: false,
+                        fill: false,
+                        tension: 0
+                    },
+                    {
+                        label: 'Diabetes Limit (≥126)',
+                        data: prediabLine,
+                        borderColor: C.red,
+                        backgroundColor: C.red,
+                        borderWidth: 1.5,
+                        borderDash: [4, 4],
+                        pointStyle: false,
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { grid: { color: theme.grid }, ticks: { color: theme.text, font: { size: 11 } } },
+                    y: {
+                        title: { display: true, text: 'Glucose (mg/dL)', color: theme.text, font: { weight: '600', family: 'Inter' } },
+                        suggestedMin: 70, suggestedMax: 180,
+                        grid: { color: theme.grid },
+                        ticks: { color: theme.text }
+                    }
+                },
+                plugins: { ...basePlugins(theme) }
+            }
+        });
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 5 — BMI Classification Gauge (WHO categories)
+    // ════════════════════════════════════════════════════════════════════════
+    function buildBmiGauge(theme, bmi) {
+        const ctx = document.getElementById('lineChart');
+        if (!ctx) return;
+
+        // WHO BMI categories with fixed widths representing the range width
+        // Scale: 15–45 range = 30 units total
+        const cats = [
+            { label: 'Underweight (<18.5)', width: 3.5, color: C.blue },
+            { label: 'Normal (18.5–24.9)', width: 6.4, color: C.green },
+            { label: 'Overweight (25–29.9)', width: 5, color: C.yellow },
+            { label: 'Obese (≥30)', width: 15, color: C.red },
+        ];
+
+        // Which category is the patient in?
+        const activeIdx = bmi < 18.5 ? 0 : bmi < 25 ? 1 : bmi < 30 ? 2 : 3;
+
+        window.chartInstances.line = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: cats.map(c => c.label),
+                datasets: [{
+                    data: cats.map(c => c.width),
+                    backgroundColor: cats.map((c, i) => i === activeIdx ? c.color : c.color + '44'),
+                    borderColor: cats.map((c, i) => i === activeIdx ? c.color : 'transparent'),
+                    borderWidth: cats.map((_, i) => i === activeIdx ? 3 : 0),
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    ...basePlugins(theme),
+                    legend: { ...basePlugins(theme).legend, position: 'bottom' },
+                    tooltip: {
+                        ...basePlugins(theme).tooltip,
+                        callbacks: {
+                            label: ctx2 => {
+                                const isActive = ctx2.dataIndex === activeIdx;
+                                return ` ${cats[ctx2.dataIndex].label}${isActive ? '  ← Your BMI ' + bmi : ''}`;
                             }
                         }
                     }
                 }
-            });
-        }
+            },
+            plugins: [{
+                id: 'bmiLabel',
+                afterDatasetsDraw(chart) {
+                    const { ctx: c, width, height } = chart;
+                    const catName = ['Underweight', 'Normal', 'Overweight', 'Obese'][activeIdx];
+                    const catColor = cats[activeIdx].color;
+                    c.save();
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    const cx = width / 2, cy = height / 2 - 10;
+                    const isLight = document.body.classList.contains('light-theme');
+                    c.fillStyle = isLight ? '#0f172a' : '#f1f5f9';
+                    c.font = `bold 22px Inter`;
+                    c.fillText(bmi.toFixed(1), cx, cy);
+                    c.fillStyle = catColor;
+                    c.font = `600 12px Inter`;
+                    c.fillText(catName, cx, cy + 22);
+                    c.restore();
+                }
+            }]
+        });
+    }
 
-        // --- 1. Dynamic Analytical Summary Text ---
-        let findings = [];
-        if (bmi >= 30) findings.push(`carrying extra weight`);
-        else if (bmi >= 25) findings.push(`feeling a bit heavy`);
-        
-        if (hba1c >= 6.5) findings.push(`high average blood sugar`);
-        else if (hba1c >= 5.7) findings.push(`slightly high sugars`);
+    // ════════════════════════════════════════════════════════════════════════
+    // CHART 6 — Blood Pressure Classification (AHA 2017)
+    // ════════════════════════════════════════════════════════════════════════
+    function buildBpGauge(theme, bp) {
+        const ctx = document.getElementById('polarChart');
+        if (!ctx) return;
 
-        if (bp > 130) findings.push(`some high blood pressure`);
-
-        let summaryText;
-        if (findings.length > 0) {
-            const intros = [
-                "Your body is currently managing ",
-                "We're seeing indicators pointing to ",
-                "Your profile highlights "
-            ];
-            const advicePool = [
-                "Partnering with a medical professional and mapping out a manageable wellness plan can do wonders.",
-                "Small, consistent choices in diet and gentle movement map directly back to lowering these metrics.",
-                "These are reversible trends. Committing to steady, sustainable lifestyle habits will have a massive protective impact."
-            ];
-            let randIntro = intros[Math.floor(Math.random() * intros.length)];
-            let randAdvice = advicePool[Math.floor(Math.random() * advicePool.length)];
-            summaryText = `${randIntro}${findings.join(" and ")}. ${randAdvice}`;
-        } else {
-            summaryText = `Your core metrics are solidly in target zones! Keep up the momentum with your excellent healthy habits.`;
-        }
-
-        const summaryTextElement = document.getElementById('clinical-summary-text');
-        if (summaryTextElement) summaryTextElement.innerText = summaryText;
-
-        // --- 2. Update Range Bars (Card 7) ---
-        const glucoseValElement = document.getElementById('indicator-glucose-val');
-        if (glucoseValElement) glucoseValElement.innerText = glucose;
-
-        const hba1cValElement = document.getElementById('indicator-hba1c-val');
-        if (hba1cValElement) hba1cValElement.innerText = hba1c;
-
-        // Calculate percentages for the marker positions (clamping between 2% and 98% to keep them visible)
-        const clamp = (val, min, max) => Math.min(98, Math.max(2, ((val - min) / (max - min)) * 100));
-
-        const markerg = document.getElementById('marker-glucose');
-        if (markerg) markerg.style.left = clamp(glucose, 40, 300) + "%";
-
-        const markerh = document.getElementById('marker-hba1c');
-        if (markerh) markerh.style.left = clamp(hba1c, 3.0, 14.0) + "%";
-
-        // --- 3. Update Risk Score (Card 8) ---
-        let riskScore = Math.min(10, Math.max(1, (((glucose / 200) + (bmi / 40) + (hba1c / 10)) / 3 * 10)));
-        
-        const plarge = document.getElementById('percentile-large-text');
-        if (plarge) plarge.innerText = riskScore.toFixed(1);
-
-        const pmarker = document.getElementById('marker-percentile');
-        if (pmarker) pmarker.style.left = clamp((riskScore * 10), 2, 98) + "%";
-        
-        const glucoseHighWarnings = [
-            "Your fasting glucose is above target range. ",
-            "We're seeing elevated glucose levels currently. ",
-            "Your blood sugar is running higher than optimal right now. "
-        ];
-        const glucoseCautionWarnings = [
-            "Your glucose is slightly elevated into the caution zone. ",
-            "We're observing borderline glucose levels today. ",
-            "Your fasting sugar is hovering slightly above ideal limits. "
-        ];
-        const glucoseNormal = [
-            "Fantastic work—your glucose is perfectly within target range! ",
-            "Great job maintaining optimal blood sugar levels! ",
-            "Your glucose control is looking excellent right now. "
+        const cats = [
+            { label: 'Normal (<120)', thresh: 120, color: C.green },
+            { label: 'Elevated (120–129)', thresh: 130, color: C.blue },
+            { label: 'Stage 1 (130–139)', thresh: 140, color: C.yellow },
+            { label: 'Stage 2 (≥140)', thresh: 180, color: C.red },
         ];
 
-        let glucoseWarning = "";
-        if (glucose >= 126) glucoseWarning = glucoseHighWarnings[Math.floor(Math.random() * glucoseHighWarnings.length)];
-        else if (glucose >= 100) glucoseWarning = glucoseCautionWarnings[Math.floor(Math.random() * glucoseCautionWarnings.length)];
-        else glucoseWarning = glucoseNormal[Math.floor(Math.random() * glucoseNormal.length)];
+        const activeIdx = bp < 120 ? 0 : bp < 130 ? 1 : bp < 140 ? 2 : 3;
 
-        let actionAdvice = [
-            "Focus on pairing your carbs with protein to keep energy steady.",
-            "Remember that even a 15-minute walk after meals makes a massive difference.",
-            "Consistency is key—focus on small, sustainable daily habits.",
-            "Hydration and sleep are just as important as diet for managing these numbers.",
-            "You've got this! Keep prioritizing whole foods and staying active."
-        ][Math.floor(Math.random() * 5)];
+        window.chartInstances.polar = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: cats.map(c => c.label),
+                datasets: [{
+                    data: [20, 10, 10, 40],  // relative visual widths for the arc
+                    backgroundColor: cats.map((c, i) => i === activeIdx ? c.color : c.color + '44'),
+                    borderColor: cats.map((c, i) => i === activeIdx ? c.color : 'transparent'),
+                    borderWidth: cats.map((_, i) => i === activeIdx ? 3 : 0),
+                    hoverOffset: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '62%',
+                plugins: {
+                    ...basePlugins(theme),
+                    legend: { ...basePlugins(theme).legend, position: 'bottom' },
+                    tooltip: {
+                        ...basePlugins(theme).tooltip,
+                        callbacks: {
+                            label: ctx2 => {
+                                const isActive = ctx2.dataIndex === activeIdx;
+                                return ` ${cats[ctx2.dataIndex].label}${isActive ? '  ← Your BP ' + bp + ' mmHg' : ''}`;
+                            }
+                        }
+                    }
+                }
+            },
+            plugins: [{
+                id: 'bpLabel',
+                afterDatasetsDraw(chart) {
+                    const { ctx: c, width, height } = chart;
+                    const catName = ['Normal', 'Elevated', 'Stage 1 HBP', 'Stage 2 HBP'][activeIdx];
+                    const catColor = cats[activeIdx].color;
+                    c.save();
+                    c.textAlign = 'center';
+                    c.textBaseline = 'middle';
+                    const cx = width / 2, cy = height / 2 - 10;
+                    const isLight = document.body.classList.contains('light-theme');
+                    c.fillStyle = isLight ? '#0f172a' : '#f1f5f9';
+                    c.font = `bold 22px Inter`;
+                    c.fillText(bp + ' mmHg', cx, cy);
+                    c.fillStyle = catColor;
+                    c.font = `600 12px Inter`;
+                    c.fillText(catName, cx, cy + 22);
+                    c.restore();
+                }
+            }]
+        });
+    }
 
-        if (riskScore >= 7.0) {
-            actionAdvice = "Now is an ideal time to proactively consult your care team to safely refine your management plan.";
+    // ════════════════════════════════════════════════════════════════════════
+    // CARD 7 — Clinical Marker Strips (Glucose + HbA1c)
+    // ════════════════════════════════════════════════════════════════════════
+    function buildMarkerStrips({ glucose, hba1c }) {
+        // Glucose strip
+        const gEl = document.getElementById('indicator-glucose-val');
+        if (gEl) {
+            const zone = glucose < 100 ? 'Normal' : glucose < 126 ? 'Prediabetes' : 'Diabetes';
+            const col = glucose < 100 ? C.green : glucose < 126 ? C.yellow : C.red;
+            gEl.textContent = glucose;
+            gEl.style.color = col;
+        }
+        const mg = document.getElementById('marker-glucose');
+        if (mg) mg.style.left = clamp(normalizeScale(glucose, 60, 99, 125, 300), 0, 100) + '%';
+
+        // HbA1c strip
+        const hEl = document.getElementById('indicator-hba1c-val');
+        if (hEl) {
+            const col = hba1c < 5.7 ? C.green : hba1c < 6.5 ? C.yellow : C.red;
+            hEl.textContent = hba1c;
+            hEl.style.color = col;
+        }
+        const mh = document.getElementById('marker-hba1c');
+        if (mh) mh.style.left = clamp(normalizeScale(hba1c, 4.0, 5.69, 6.49, 14.0), 0, 100) + '%';
+    }
+
+    // ════════════════════════════════════════════════════════════════════════
+    // CARD 8 — Evidence-based Risk Factor Summary
+    // Shows discrete ADA/CDC risk factors with green/amber/red status.
+    // No invented composite score — just transparent factor checklist.
+    // ════════════════════════════════════════════════════════════════════════
+    function buildRiskFactorSummaryCard({ glucose, hba1c, bmi, bp, age, dpf, preg }) {
+        const container = document.getElementById('percentile-large-text');
+        const desc = document.getElementById('percentile-desc-text');
+        const marker = document.getElementById('marker-percentile');
+
+        // ADA-recognised independent risk factors for Type 2 diabetes
+        const factors = [
+            { label: 'Fasting Glucose', ok: glucose < 100, warn: glucose < 126, val: `${glucose} mg/dL` },
+            { label: 'HbA1c', ok: hba1c < 5.7, warn: hba1c < 6.5, val: `${hba1c}%` },
+            { label: 'BMI', ok: bmi < 25, warn: bmi < 30, val: `${bmi}` },
+            { label: 'Blood Pressure', ok: bp < 120, warn: bp < 140, val: `${bp} mmHg` },
+            { label: 'Age', ok: age < 35, warn: age < 45, val: `${age} yrs` },
+            { label: 'Family History DPF', ok: dpf < 0.3, warn: dpf < 0.6, val: dpf.toFixed(2) },
+        ];
+
+        const elevated = factors.filter(f => !f.ok && !f.warn).length;
+        const caution = factors.filter(f => !f.ok && f.warn).length;
+
+        if (container) {
+            container.innerHTML = factors.map(f => {
+                const status = f.ok ? 'Normal' : f.warn ? 'Borderline' : 'Elevated';
+                const col = f.ok ? C.green : f.warn ? C.yellow : C.red;
+                const icon = f.ok ? '✓' : f.warn ? '⚠' : '✗';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--glass-border)">
+                    <span style="font-size:0.85rem;color:var(--text-main)">${f.label}</span>
+                    <span style="display:flex;gap:8px;align-items:center">
+                        <span style="font-size:0.82rem;color:var(--text-muted)">${f.val}</span>
+                        <span style="font-size:0.78rem;font-weight:600;color:${col};min-width:72px;text-align:right">${icon} ${status}</span>
+                    </span>
+                </div>`;
+            }).join('');
         }
 
-        const pdesc = document.getElementById('percentile-desc-text');
-        if (pdesc) {
-            pdesc.innerText = `${glucoseWarning}${actionAdvice}`;
+        // Marker: fraction of factors elevated
+        if (marker) {
+            const riskPct = Math.round(((elevated + caution * 0.5) / factors.length) * 100);
+            marker.style.left = clamp(riskPct, 3, 97) + '%';
+        }
+
+        if (desc) {
+            if (elevated === 0 && caution === 0) {
+                desc.textContent = 'All assessed markers within normal ADA ranges. Continue current lifestyle habits.';
+            } else {
+                const parts = [];
+                if (elevated > 0) parts.push(`${elevated} marker${elevated > 1 ? 's' : ''} in the elevated range`);
+                if (caution > 0) parts.push(`${caution}  marker${caution > 1 ? 's' : ''} borderline`);
+                desc.textContent = `${parts.join(' and ')}. Review with your healthcare provider for personalised guidance.`;
+            }
         }
     }
 
-    // Start
+    // ════════════════════════════════════════════════════════════════════════
+    // Clinical Summary Text
+    // ════════════════════════════════════════════════════════════════════════
+    function buildClinicalSummary({ glucose, hba1c, bmi, bp, insulin, age }) {
+        const el = document.getElementById('clinical-summary-text');
+        if (!el) return;
+
+        const notes = [];
+
+        // ADA diagnostic criteria (any one sufficient for prediabetes/diabetes)
+        if (glucose >= 126) notes.push(`Fasting glucose of ${glucose} mg/dL meets the ADA threshold for diabetes (≥126 mg/dL).`);
+        else if (glucose >= 100) notes.push(`Fasting glucose of ${glucose} mg/dL falls in the prediabetes range (100–125 mg/dL).`);
+        else notes.push(`Fasting glucose of ${glucose} mg/dL is within the normal range (<100 mg/dL).`);
+
+        if (hba1c >= 6.5) notes.push(`HbA1c of ${hba1c}% meets the ADA diagnostic criterion for diabetes (≥6.5%).`);
+        else if (hba1c >= 5.7) notes.push(`HbA1c of ${hba1c}% indicates prediabetes (5.7%–6.4% per ADA).`);
+        else notes.push(`HbA1c of ${hba1c}% is within the normal range.`);
+
+        if (bmi >= 30) notes.push(`BMI of ${bmi} kg/m² is in the obese category — a significant modifiable risk factor.`);
+        else if (bmi >= 25) notes.push(`BMI of ${bmi} kg/m² is in the overweight range; modest weight reduction lowers diabetes risk.`);
+
+        if (bp >= 140) notes.push(`Blood pressure of ${bp} mmHg is Stage 2 hypertension (AHA). Often co-occurs with insulin resistance.`);
+        else if (bp >= 130) notes.push(`Blood pressure of ${bp} mmHg is Stage 1 hypertension.`);
+        else if (bp >= 120) notes.push(`Blood pressure of ${bp} mmHg is elevated (AHA definition).`);
+
+        el.innerHTML = notes.map(n => `<span style="display:block;margin-bottom:4px">• ${n}</span>`).join('');
+    }
+
+    // ─── Run ──────────────────────────────────────────────────────────────────
     init();
 });

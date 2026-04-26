@@ -9,7 +9,7 @@
     --input-bg: rgba(30, 41, 59, 0.8);
 
     --risk-low: #10b981;
-    --risk-medium: #facc15;
+    --risk-medium: #f59e0b;
     --risk-high: #ef4444;
 
     --chart-text-color: #ffffff;
@@ -733,13 +733,13 @@ body.light-theme .risk-high {
 
     0%,
     100% {
-        box-shadow: 0 0 20px rgba(250, 204, 21, 0.2);
-        filter: drop-shadow(0 0 5px rgba(250, 204, 21, 0.2));
+        box-shadow: 0 0 20px rgba(245, 158, 11, 0.2);
+        filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.2));
     }
 
     50% {
-        box-shadow: 0 0 40px rgba(250, 204, 21, 0.6);
-        filter: drop-shadow(0 0 15px rgba(250, 204, 21, 0.4));
+        box-shadow: 0 0 40px rgba(245, 158, 11, 0.6);
+        filter: drop-shadow(0 0 15px rgba(245, 158, 11, 0.4));
     }
 }
 
@@ -916,15 +916,28 @@ body.light-theme #charts-section h3 {
 }
 
 #charts-section > div {
-    display: grid;
-    gap: 24px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
     width: 100%;
     align-items: stretch;
 }
 
 .bento-grid {
-    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-    gap: 1.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+/* ── Dynamic Bento Layout ─────────────────────── */
+.bento-grid > .chart-container {
+    flex: 1 1 420px;
+    min-width: 300px;
+}
+
+/* Chart 8: Risk Factor Checklist — full width */
+.bento-grid > .chart-container:nth-child(8) {
+    flex: 1 1 100%;
 }
 
 .chart-wrapper {
@@ -947,7 +960,7 @@ body.light-theme #charts-section h3 {
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
-    height: 420px;
+    min-height: 0; /* auto-size to content */
     background: linear-gradient(135deg,
             rgba(15, 23, 42, 0.5) 0%,
             rgba(30, 41, 59, 0.3) 100%);
@@ -955,7 +968,7 @@ body.light-theme #charts-section h3 {
     -webkit-backdrop-filter: blur(25px) saturate(180%);
     border: 1.5px solid rgba(6, 182, 212, 0.3);
     border-radius: 24px;
-    padding: 32px;
+    padding: 28px;
     box-shadow:
         0 10px 40px rgba(0, 0, 0, 0.3),
         inset 0 1px 0 rgba(255, 255, 255, 0.12),
@@ -1026,21 +1039,22 @@ body.light-theme .chart-container:hover {
 }
 
 /* Responsive */
+@media (max-width: 1100px) {
+    .bento-grid > .chart-container {
+        flex: 1 1 350px;
+    }
+}
+
 @media (max-width: 768px) {
     #charts-section > div {
-        grid-template-columns: 1fr !important;
-        height: auto;
         gap: 16px;
     }
-    
-    .bento-grid {
-        grid-template-columns: repeat(2, 1fr) !important;
+    .bento-grid > .chart-container {
+        flex: 1 1 100%;
     }
 
-
-
     #charts-section canvas {
-        min-height: 350px;
+        min-height: 280px;
     }
 
     .chart-container {
@@ -1055,13 +1069,12 @@ body.light-theme .chart-container:hover {
 }
 
 @media (max-width: 480px) {
-    #charts-section > div, .bento-grid {
-        grid-template-columns: 1fr !important;
+    .bento-grid {
         gap: 12px;
     }
 
     #charts-section canvas {
-        min-height: 300px;
+        min-height: 250px;
     }
 
     .chart-container {

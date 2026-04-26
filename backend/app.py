@@ -45,17 +45,17 @@ async def load_models():
     try:
         if os.path.exists(MODEL_PATH):
             model = joblib.load(MODEL_PATH)
-            print(f"✅ Model successfully loaded from {MODEL_PATH}")
+            print(f"[OK] Model successfully loaded from {MODEL_PATH}")
         else:
-            print(f"⚠️ Model file not found at {MODEL_PATH}")
+            print(f"[WARN] Model file not found at {MODEL_PATH}")
             
         if os.path.exists(SCALER_PATH):
             scaler = joblib.load(SCALER_PATH)
-            print(f"✅ Scaler successfully loaded from {SCALER_PATH}")
+            print(f"[OK] Scaler successfully loaded from {SCALER_PATH}")
         else:
-            print(f"⚠️ Scaler file not found at {SCALER_PATH}")
+            print(f"[WARN] Scaler file not found at {SCALER_PATH}")
     except Exception as e:
-        print(f"❌ Error loading model resources: {e}")
+        print(f"[ERROR] Error loading model resources: {e}")
 
 def get_bmi_category(bmi: float) -> int:
     """Standard clinical BMI categorization used in the training notebook."""
@@ -137,7 +137,7 @@ async def predict_risk(data: PredictionInput):
         }
         
     except Exception as e:
-        print(f"❌ Prediction error: {e}")
+        print(f"[ERROR] Prediction error: {e}")
         raise HTTPException(
             status_code=500, 
             detail=f"Prediction failed: {str(e)}"

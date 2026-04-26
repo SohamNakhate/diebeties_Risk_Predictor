@@ -24,17 +24,37 @@ wheels/
 ENV/
 
 # Jupyter Notebook
-.ipynb_checkpoints
+.ipynb_checkpoints/
+!*.ipynb
 
 # Environment Variables
 .env
+.env.*
 
-# Models (optional to ignore, usually ignored if large)
-# backend/models/*.joblib
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+
+# Data
+# Ignore large datasets to keep repo size small
+*.csv
+*.dat
+*.h5
+
+# Models (Deliberately tracked for backend deployment)
+!*.joblib
+!*.pkl
 
 # Editor/OS
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-pima_with_hba1c.csv
+Desktop.ini
+
+# Frontend / Node
+node_modules/
+.parcel-cache/
+dist/
+build/
