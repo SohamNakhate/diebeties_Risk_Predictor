@@ -7,6 +7,7 @@ An advanced, AI-powered web application designed to predict the risk of diabetes
 - **AI Risk Assessment**: Uses a trained machine learning model (XGBoost) to evaluate diabetes risk.
 - **Clinical Analytics Dashboard**: A dedicated dashboard featuring clinical-grade visualisations (Radar, Scatter, Gauges, Bar charts) built with Chart.js to explain risk factors comprehensively.
 - **Premium UI**: Modern, glassmorphism-inspired "bento grid" design with support for both Light and Dark modes.
+- **Secure Login Interface**: Built-in authentication entry point for secure access to the predictor.
 - **Dynamic Recommendations**: Provides tailored lifestyle advice based on predicted risk levels.
 - **FastAPI Backend**: High-performance asynchronous API for seamless inference.
 - **Responsive Layout**: Optimized for both desktop and mobile viewing with zero layout shift.
@@ -49,9 +50,9 @@ The analysis leverages both ML probabilities and strict clinical thresholds (ADA
 - Insulin Level (IU/mL)
 - BMI
 - Diabetes Pedigree Function
-- Age
-- **HbA1c Level (%)** 
-- **BMI Category** 
+- Age: Measured in years.
+- **HbA1c Level (%)**: A measure of average blood sugar over the past 3 months (ADA standard).
+- **BMI Category**: Clinically derived category (Underweight, Normal, Overweight, Obese).
 
 ## 🤖 Model Export & Usage
 
