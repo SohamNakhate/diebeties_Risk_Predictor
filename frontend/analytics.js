@@ -1,9 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ── Auth Guard ──
+    if (localStorage.getItem('loggedIn') !== 'true') {
+        window.location.href = 'login.html';
+        return;
+    }
     // ─── Theme ────────────────────────────────────────────────────────────────
     const chartThemes = {
         light: { text: '#475569', grid: 'rgba(0, 0, 0, 0.08)', tooltipBg: 'rgba(255,255,255,0.95)', tooltipTitle: '#0f172a', tooltipBody: '#475569' },
         dark: { text: '#cbd5e1', grid: 'rgba(255,255,255,0.08)', tooltipBg: 'rgba(15,23,42,0.95)', tooltipTitle: '#f1f5f9', tooltipBody: '#cbd5e1' }
     };
+
+    function getHistoryKey() {
+        const username = localStorage.getItem('username') || 'default';
+        return `diabetesHistory_${username}`;
+    }
+
+    function getAnalyticsKey() {
+        const username = localStorage.getItem('username') || 'default';
+        return `analyticsData_${username}`;
+    }
 
     function getTheme() {
         return document.body.classList.contains('light-theme') ? chartThemes.light : chartThemes.dark;
@@ -118,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.chartInstances = {};
 
     function init() {
-        const raw = localStorage.getItem('analyticsData');
+        const raw = localStorage.getItem(getAnalyticsKey());
         if (!raw) {
             document.querySelector('.dashboard-grid')?.classList.add('hidden');
             document.getElementById('no-data-msg')?.classList.remove('hidden');
@@ -514,7 +529,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const ctx = document.getElementById('scatterChart');
         if (!ctx) return;
 
-        let history = JSON.parse(localStorage.getItem('diabetesHistory') || '[]');
+        let history = JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
         // history is newest-first; reverse to chronological
         const chron = [...history].reverse();
 
@@ -553,7 +568,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 labels,
                 datasets: [
                     {
-                        label: 'Avg Fasting Glucose',
+                        label: 'Normal (<100)',
+                        data: normalLine,
+                        borderColor: C.green,
+                        backgroundColor: C.green,
+                        borderWidth: 1.5,
+                        borderDash: [4, 4],
+                        pointStyle: false,
+                        fill: false,
+                        tension: 0
+                    },
+
+                    {
+                        label: 'Prediabetic (100-126)',
                         data: values,
                         borderColor: C.blue,
                         backgroundColor: C.blueA,
@@ -566,21 +593,11 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (v >= 100) return C.yellow;
                             return C.green;
                         }),
-                        pointBorderColor: '#fff',
-                        pointBorderWidth: 1.5,
+                        pointBorderColor: 'transparent',
+                        pointBorderWidth: 0,
                         pointHoverRadius: 8
                     },
-                    {
-                        label: 'Normal (<100)',
-                        data: normalLine,
-                        borderColor: C.green,
-                        backgroundColor: C.green,
-                        borderWidth: 1.5,
-                        borderDash: [4, 4],
-                        pointStyle: false,
-                        fill: false,
-                        tension: 0
-                    },
+
                     {
                         label: 'Diabetes Limit (≥126)',
                         data: prediabLine,

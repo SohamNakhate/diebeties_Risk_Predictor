@@ -6,6 +6,8 @@ from pydantic import BaseModel
 import joblib
 import os
 from pathlib import Path
+import json
+import hashlib
 
 app = FastAPI(title="Diabetes Risk Predictor API")
 
@@ -29,6 +31,13 @@ class PredictionInput(BaseModel):
     age: float
     hba1c: float
 
+class UserAuth(BaseModel):
+    username: str
+    password: str
+
+class UserSignup(UserAuth):
+    pass
+
 # Define the expected location of the ML model and scaler
 MODEL_DIR = os.path.join(os.path.dirname(__file__), "models")
 os.makedirs(MODEL_DIR, exist_ok=True)
@@ -38,6 +47,27 @@ SCALER_PATH = os.path.join(MODEL_DIR, "scaler.joblib")
 # Global model and scaler objects
 model = None
 scaler = None
+
+# User Management
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+os.makedirs(DATA_DIR, exist_ok=True)
+USERS_FILE = os.path.join(DATA_DIR, "users.json")
+
+def hash_password(password: str) -> str:
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def get_users():
+    if not os.path.exists(USERS_FILE):
+        return {}
+    with open(USERS_FILE, "r") as f:
+        try:
+            return json.load(f)
+        except:
+            return {}
+
+def save_users(users):
+    with open(USERS_FILE, "w") as f:
+        json.dump(users, f, indent=4)
 
 @app.on_event("startup")
 async def load_models():
@@ -142,6 +172,29 @@ async def predict_risk(data: PredictionInput):
             status_code=500, 
             detail=f"Prediction failed: {str(e)}"
         )
+
+@app.post("/api/signup")
+async def signup(user: UserSignup):
+    users = get_users()
+    if user.username in users:
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    users[user.username] = {
+        "password": hash_password(user.password)
+    }
+    save_users(users)
+    return {"message": "User created successfully"}
+
+@app.post("/api/login")
+async def login(user: UserAuth):
+    users = get_users()
+    if user.username not in users:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    if users[user.username]["password"] != hash_password(user.password):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+    
+    return {"message": "Login successful", "username": user.username}
 
 # Redirect root to login page
 @app.get("/")

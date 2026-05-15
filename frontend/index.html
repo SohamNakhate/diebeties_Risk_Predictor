@@ -234,11 +234,13 @@
                     </div>
                 </div>
 
-                <div class="action-bar">
-                    <button type="submit" class="primary-btn" id="submit-btn">
+                <div class="action-bar" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 450px; margin: 2rem auto 0 auto;">
+                    <button type="submit" class="primary-btn" id="submit-btn" style="grid-column: 1 / -1; width: 100%; max-width: none;">
                         <span class="btn-text">Analyze Risk</span>
                         <div class="spinner hidden" id="loading-spinner"></div>
                     </button>
+                    <button type="button" class="secondary-btn view-history-btn" style="width: 100%; padding: 0.9rem 1rem; font-size: 1rem; display: flex; justify-content: center; align-items: center;">View History</button>
+                    <button type="button" class="secondary-btn view-visuals-btn" style="width: 100%; padding: 0.9rem 1rem; font-size: 1rem; display: flex; justify-content: center; align-items: center;">View Analytics</button>
                 </div>
 
                 <div class="parameter-info">
@@ -277,9 +279,9 @@
             </div>
 
             <div class="action-bar" style="display: flex; flex-direction: column; align-items: center; gap: 0.8rem; margin-top: 1.5rem;">
-                <button class="primary-btn" id="view-visuals-btn">View Detailed Analytics</button>
-                <button class="primary-btn" id="reset-btn">Start New Analysis</button>
-                <button class="secondary-btn" id="view-history-btn" style="width: 100%; max-width: 300px; margin-top: 0.5rem;">View Past Logs</button>
+                <button type="button" class="primary-btn view-visuals-btn">View Detailed Analytics</button>
+                <button type="button" class="primary-btn" id="reset-btn">Start New Analysis</button>
+                <button type="button" class="secondary-btn view-history-btn" style="width: 100%; max-width: 300px; margin-top: 0.5rem;">View Past Logs</button>
             </div>
         </section>
     </main>

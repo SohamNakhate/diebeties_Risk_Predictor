@@ -1,9 +1,30 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // ── Auth Guard ──
+    if (localStorage.getItem('loggedIn') !== 'true') {
+        window.location.href = 'login.html';
+        return;
+    }
+
+    // Set username in UI
+    const username = localStorage.getItem('username') || 'User';
+    const displayUsername = document.getElementById('display-username');
+    if (displayUsername) displayUsername.textContent = username;
+
+    // ── User-Specific Storage Key ──
+    function getHistoryKey() {
+        const username = localStorage.getItem('username') || 'default';
+        return `diabetesHistory_${username}`;
+    }
+
     // History Persistence Setup
     function initHistory() {
-        let history = JSON.parse(localStorage.getItem('diabetesHistory'));
+        const historyKey = getHistoryKey();
+        let history = JSON.parse(localStorage.getItem(historyKey));
+        
         // Force pre-populate realistic 6-month prediabetic history if empty or under 13 points (demo purposes)
-        if (!history || history.length < 13) {
+        // ONLY apply this for the "demo" account as requested
+        const username = localStorage.getItem('username');
+        if (username === 'demo' && (!history || history.length < 13)) {
             const now = Date.now();
             const twoWeeksMs = 1000 * 60 * 60 * 24 * 14; 
             const newHistory = [];
@@ -34,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // LocalStorage expects index 0 to be newest (reverse the chronological array)
-            localStorage.setItem('diabetesHistory', JSON.stringify(newHistory.reverse()));
+            localStorage.setItem(historyKey, JSON.stringify(newHistory.reverse()));
         }
     }
     initHistory();
@@ -46,26 +67,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnText = document.querySelector('.btn-text');
     const spinner = document.getElementById('loading-spinner');
     const resetBtn = document.getElementById('reset-btn');
-    const viewVisualsBtn = document.getElementById('view-visuals-btn');
+    const viewVisualsBtns = document.querySelectorAll('.view-visuals-btn');
 
-    if (viewVisualsBtn) {
-        viewVisualsBtn.addEventListener('click', () => {
+    viewVisualsBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
             window.open('analytics.html', '_blank');
         });
-    }
+    });
 
     // Modal UI logic mapped to buttons
-    const viewHistoryBtn = document.getElementById('view-history-btn');
+    const viewHistoryBtns = document.querySelectorAll('.view-history-btn');
     const historyModalOverlay = document.getElementById('history-modal-overlay');
     const closeHistoryBtn = document.getElementById('close-history-btn');
     const clearHistoryBtn = document.getElementById('clear-history-btn');
 
-    if (viewHistoryBtn) {
-        viewHistoryBtn.addEventListener('click', () => {
+    viewHistoryBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
             renderHistory();
             historyModalOverlay.classList.remove('hidden');
         });
-    }
+    });
 
     if (closeHistoryBtn) {
         closeHistoryBtn.addEventListener('click', () => {
@@ -84,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (clearHistoryBtn) {
         clearHistoryBtn.addEventListener('click', () => {
             if (window.confirm("Are you sure you want to clear your entire prediction history?")) {
-                localStorage.removeItem('diabetesHistory');
+                localStorage.removeItem(getHistoryKey());
                 renderHistory(); // Refresh immediately to empty state
             }
         });
@@ -96,7 +117,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!listContainer) return;
         
         listContainer.innerHTML = '';
-        let history = JSON.parse(localStorage.getItem('diabetesHistory')) || [];
+        const historyKey = getHistoryKey();
+        let history = JSON.parse(localStorage.getItem(historyKey)) || [];
         
         if (history.length === 0) {
             listContainer.innerHTML = '<p style="text-align: center; color: var(--text-muted); padding: 2rem;">No history found. Try running an analysis.</p>';
@@ -130,7 +152,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function saveToHistory(inputs, riskLevel) {
-        let history = JSON.parse(localStorage.getItem('diabetesHistory')) || [];
+        const historyKey = getHistoryKey();
+        let history = JSON.parse(localStorage.getItem(historyKey)) || [];
         
         // Build payload
         const record = {
@@ -148,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             history.pop();
         }
 
-        localStorage.setItem('diabetesHistory', JSON.stringify(history));
+        localStorage.setItem(historyKey, JSON.stringify(history));
     }
 
     // Theme Toggle Logic
@@ -198,6 +221,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Sign Out
     signoutBtn.addEventListener('click', () => {
         localStorage.removeItem('loggedIn');
+        localStorage.removeItem('username');
         window.location.href = 'login.html';
     });
 
@@ -344,7 +368,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (window.latestInputs) {
                 // Save context so the new tab can access it
-                localStorage.setItem('analyticsData', JSON.stringify(window.latestInputs));
+                const analyticsKey = `analyticsData_${localStorage.getItem('username') || 'default'}`;
+                localStorage.setItem(analyticsKey, JSON.stringify(window.latestInputs));
             }
         }, 400); // Wait for transition out
     }

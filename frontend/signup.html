@@ -3,12 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - Diabetes Risk Predictor</title>
-    <meta name="description" content="Log in to the AI-powered Diabetes Risk Predictor to analyze your health metrics.">
+    <title>Sign Up - Diabetes Risk Predictor</title>
+    <meta name="description" content="Create an account for the AI-powered Diabetes Risk Predictor.">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Login-specific layout — keeps content vertically centered */
         body {
             min-height: 100vh;
             display: flex;
@@ -55,18 +54,11 @@
             color: var(--text-main);
         }
 
-        body:not(.light-theme) .login-header h1 {
-            text-shadow:
-                0 2px 10px rgba(255, 255, 255, 0.1),
-                0 0 20px rgba(6, 182, 212, 0.2);
-        }
-
         .login-header p {
             color: var(--text-muted);
             font-size: 1rem;
         }
 
-        /* Login form grid — stack inputs vertically */
         .login-form .input-grid {
             display: flex;
             flex-direction: column;
@@ -74,12 +66,25 @@
             margin-bottom: 2rem;
         }
 
-        /* Error toast */
         .login-error {
             display: none;
             background: rgba(239, 68, 68, 0.15);
             border: 1px solid rgba(239, 68, 68, 0.4);
             color: #fca5a5;
+            padding: 0.85rem 1.25rem;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            animation: fadeIn 0.3s ease-out;
+            backdrop-filter: blur(8px);
+        }
+
+        .login-success {
+            display: none;
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.4);
+            color: #86efac;
             padding: 0.85rem 1.25rem;
             border-radius: 12px;
             font-size: 0.9rem;
@@ -95,41 +100,33 @@
             color: #dc2626;
         }
 
-        .login-error.visible {
+        body.light-theme .login-success {
+            background: rgba(34, 197, 94, 0.08);
+            border: 1px solid rgba(34, 197, 94, 0.25);
+            color: #16a34a;
+        }
+
+        .login-error.visible, .login-success.visible {
             display: block;
         }
 
-        /* Password visibility toggle inside input group */
-        .input-group .toggle-password {
-            position: absolute;
-            right: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            background: none;
-            border: none;
+        .auth-footer {
+            text-align: center;
+            margin-top: 1.5rem;
             color: var(--text-muted);
-            cursor: pointer;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: color 0.2s ease;
-            box-shadow: none;
+            font-size: 0.9rem;
         }
 
-        .input-group .toggle-password:hover {
+        .auth-footer a {
             color: var(--accent-primary);
-            transform: translateY(-50%) scale(1.1);
-            box-shadow: none;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s ease;
         }
 
-        @media (max-width: 500px) {
-            .login-container {
-                padding: 1rem;
-            }
-            .login-header h1 {
-                font-size: 1.6rem;
-            }
+        .auth-footer a:hover {
+            color: #3b82f6;
+            text-decoration: underline;
         }
     </style>
 </head>
@@ -150,14 +147,15 @@
             <div class="logo-icon">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
             </div>
-            <h1>Welcome Back</h1>
-            <p>Sign in to access the Diabetes Risk AI Predictor</p>
+            <h1>Create Account</h1>
+            <p>Join the Diabetes Risk AI Predictor community</p>
         </div>
 
-        <section class="glass-panel" id="login-panel">
-            <div id="login-error" class="login-error">Invalid username or password</div>
+        <section class="glass-panel" id="signup-panel">
+            <div id="signup-error" class="login-error">Something went wrong</div>
+            <div id="signup-success" class="login-success">Account created! Redirecting to login...</div>
 
-            <form id="login-form" class="login-form" autocomplete="off">
+            <form id="signup-form" class="login-form" autocomplete="off">
                 <div class="input-grid">
                     <div class="input-group">
                         <input type="text" id="username" name="username" required placeholder=" " autofocus>
@@ -166,30 +164,29 @@
                     <div class="input-group">
                         <input type="password" id="password" name="password" required placeholder=" ">
                         <label for="password">Password</label>
-                        <button type="button" class="toggle-password" id="toggle-password-btn" aria-label="Toggle password visibility">
-                            <svg id="eye-icon" class="hidden" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                            <svg id="eye-off-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
-                        </button>
+                    </div>
+                    <div class="input-group">
+                        <input type="password" id="confirm-password" name="confirm-password" required placeholder=" ">
+                        <label for="confirm-password">Confirm Password</label>
                     </div>
                 </div>
 
                 <div class="action-bar">
-                    <button type="submit" class="primary-btn" id="login-btn">
-                        <span class="btn-text">Sign In</span>
-                        <div class="spinner hidden" id="login-spinner"></div>
+                    <button type="submit" class="primary-btn" id="signup-btn">
+                        <span class="btn-text">Sign Up</span>
+                        <div class="spinner hidden" id="signup-spinner"></div>
                     </button>
                 </div>
             </form>
 
-            <div class="auth-footer" style="text-align: center; margin-top: 1.5rem; color: var(--text-muted); font-size: 0.9rem;">
-                Don't have an account? <a href="signup.html" style="color: var(--accent-primary); text-decoration: none; font-weight: 600;">Sign Up</a>
+            <div class="auth-footer">
+                Already have an account? <a href="login.html">Sign In</a>
             </div>
         </section>
     </main>
 
     <script>
     document.addEventListener('DOMContentLoaded', () => {
-        // ── Theme Toggle ──
         const themeToggleBtn = document.getElementById('theme-toggle');
         const sunIcon = document.getElementById('sun-icon');
         const moonIcon = document.getElementById('moon-icon');
@@ -204,49 +201,38 @@
             document.body.classList.toggle('light-theme');
             const isLight = document.body.classList.contains('light-theme');
             localStorage.setItem('theme', isLight ? 'light' : 'dark');
-
-            if (isLight) {
-                sunIcon.classList.add('hidden');
-                moonIcon.classList.remove('hidden');
-            } else {
-                sunIcon.classList.remove('hidden');
-                moonIcon.classList.add('hidden');
-            }
+            sunIcon.classList.toggle('hidden');
+            moonIcon.classList.toggle('hidden');
         });
 
-        // ── Password Visibility Toggle ──
-        const togglePasswordBtn = document.getElementById('toggle-password-btn');
-        const passwordInput = document.getElementById('password');
-        const eyeIcon = document.getElementById('eye-icon');
-        const eyeOffIcon = document.getElementById('eye-off-icon');
-
-        togglePasswordBtn.addEventListener('click', () => {
-            const isPassword = passwordInput.type === 'password';
-            passwordInput.type = isPassword ? 'text' : 'password';
-            eyeIcon.classList.toggle('hidden');
-            eyeOffIcon.classList.toggle('hidden');
-        });
-
-        // ── Login Logic ──
-        const form = document.getElementById('login-form');
-        const loginBtn = document.getElementById('login-btn');
-        const btnText = loginBtn.querySelector('.btn-text');
-        const spinner = document.getElementById('login-spinner');
-        const errorBox = document.getElementById('login-error');
+        const form = document.getElementById('signup-form');
+        const signupBtn = document.getElementById('signup-btn');
+        const btnText = signupBtn.querySelector('.btn-text');
+        const spinner = document.getElementById('signup-spinner');
+        const errorBox = document.getElementById('signup-error');
+        const successBox = document.getElementById('signup-success');
 
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             errorBox.classList.remove('visible');
+            successBox.classList.remove('visible');
 
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm-password').value;
+
+            if (password !== confirmPassword) {
+                errorBox.textContent = "Passwords do not match";
+                errorBox.classList.add('visible');
+                return;
+            }
 
             btnText.classList.add('hidden');
             spinner.classList.remove('hidden');
-            loginBtn.disabled = true;
+            signupBtn.disabled = true;
 
             try {
-                const response = await fetch('/api/login', {
+                const response = await fetch('/api/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
@@ -255,40 +241,26 @@
                 const data = await response.json();
 
                 if (response.ok) {
-                    localStorage.setItem('loggedIn', 'true');
-                    localStorage.setItem('username', data.username);
-                    window.location.href = 'index.html';
+                    successBox.classList.add('visible');
+                    setTimeout(() => {
+                        window.location.href = 'login.html';
+                    }, 2000);
                 } else {
-                    errorBox.textContent = data.detail || "Invalid credentials";
+                    errorBox.textContent = data.detail || "Signup failed";
                     errorBox.classList.add('visible');
                     btnText.classList.remove('hidden');
                     spinner.classList.add('hidden');
-                    loginBtn.disabled = false;
-
-                    const panel = document.getElementById('login-panel');
-                    panel.style.animation = 'none';
-                    panel.offsetHeight;
-                    panel.style.animation = 'shake 0.5s ease';
+                    signupBtn.disabled = false;
                 }
             } catch (error) {
                 errorBox.textContent = "Connection error. Is the backend running?";
                 errorBox.classList.add('visible');
                 btnText.classList.remove('hidden');
                 spinner.classList.add('hidden');
-                loginBtn.disabled = false;
+                signupBtn.disabled = false;
             }
         });
     });
     </script>
-
-    <style>
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            20% { transform: translateX(-10px); }
-            40% { transform: translateX(10px); }
-            60% { transform: translateX(-6px); }
-            80% { transform: translateX(6px); }
-        }
-    </style>
 </body>
 </html>
