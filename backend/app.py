@@ -1,13 +1,16 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 import joblib
 import os
 from pathlib import Path
 import json
 import hashlib
+import jwt
+from datetime import datetime, timedelta, timezone
 
 app = FastAPI(title="Diabetes Risk Predictor API")
 
@@ -69,6 +72,33 @@ def save_users(users):
     with open(USERS_FILE, "w") as f:
         json.dump(users, f, indent=4)
 
+# JWT Configuration
+SECRET_KEY = "super-secret-diabetes-key"
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hours
+
+security = HTTPBearer()
+
+def create_access_token(data: dict):
+    to_encode = data.copy()
+    expire = datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise HTTPException(status_code=401, detail="Invalid token")
+        return username
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
 @app.on_event("startup")
 async def load_models():
     global model, scaler
@@ -105,7 +135,7 @@ def health_check():
     }
 
 @app.post("/predict")
-async def predict_risk(data: PredictionInput):
+async def predict_risk(data: PredictionInput, current_user: str = Depends(verify_token)):
     """Generate diabetes risk prediction based on health metrics"""
     # Check if models are loaded
     if model is None or scaler is None:
@@ -194,7 +224,8 @@ async def login(user: UserAuth):
     if users[user.username]["password"] != hash_password(user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
     
-    return {"message": "Login successful", "username": user.username}
+    access_token = create_access_token(data={"sub": user.username})
+    return {"message": "Login successful", "username": user.username, "token": access_token}
 
 # Redirect root to login page
 @app.get("/")

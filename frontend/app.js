@@ -16,6 +16,14 @@ document.addEventListener('DOMContentLoaded', () => {
         return `diabetesHistory_${username}`;
     }
 
+    function getAnalyticsKey() {
+        const username = localStorage.getItem('username') || 'default';
+        return `analyticsData_${username}`;
+    }
+
+    // Clear previous session's temporary analytics data so "View Analytics" falls back to history
+    localStorage.removeItem(getAnalyticsKey());
+
     // History Persistence Setup
     function initHistory() {
         const historyKey = getHistoryKey();
@@ -222,6 +230,7 @@ document.addEventListener('DOMContentLoaded', () => {
     signoutBtn.addEventListener('click', () => {
         localStorage.removeItem('loggedIn');
         localStorage.removeItem('username');
+        localStorage.removeItem('token');
         window.location.href = 'login.html';
     });
 
@@ -278,7 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch('http://localhost:8000/predict', {
                 method: 'POST',
                 headers: {
-                    'Content-Type': 'application/json'
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`
                 },
                 body: JSON.stringify(formData)
             });

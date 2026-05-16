@@ -133,13 +133,27 @@ document.addEventListener('DOMContentLoaded', () => {
     window.chartInstances = {};
 
     function init() {
-        const raw = localStorage.getItem(getAnalyticsKey());
-        if (!raw) {
+        let raw = localStorage.getItem(getAnalyticsKey());
+        let data = null;
+        
+        if (raw) {
+            data = JSON.parse(raw);
+        }
+        
+        // If no recent analytics data, fallback to the latest history
+        if (!data) {
+            const history = JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
+            if (history.length > 0) {
+                data = history[0];
+            }
+        }
+
+        if (!data) {
             document.querySelector('.dashboard-grid')?.classList.add('hidden');
             document.getElementById('no-data-msg')?.classList.remove('hidden');
             return;
         }
-        renderAllCharts(JSON.parse(raw));
+        renderAllCharts(data);
     }
 
     function renderAllCharts(data) {

@@ -260,6 +260,15 @@
                 signupBtn.disabled = false;
             }
         });
+
+        // Reset button state if user navigates back to this page
+        window.addEventListener('pageshow', (event) => {
+            if (event.persisted) {
+                btnText.classList.remove('hidden');
+                spinner.classList.add('hidden');
+                signupBtn.disabled = false;
+            }
+        });
     });
     </script>
 </body>
