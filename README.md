@@ -54,19 +54,46 @@ The analysis leverages both ML probabilities and strict clinical thresholds (ADA
 - **HbA1c Level (%)**: A measure of average blood sugar over the past 3 months (ADA standard).
 - **BMI Category**: Clinically derived category (Underweight, Normal, Overweight, Obese).
 
-## 🤖 Model Export & Usage
+## 📊 Dataset & Model Retraining
 
-The core Machine Learning models are generated via a Jupyter Notebook and exported for backend use.
+The project includes the original dataset and a Jupyter Notebook to allow you to easily retrain the machine learning model.
 
-1. **Training & Exporting:**
-   - Open `VI_Project_model_2.ipynb` in your preferred Jupyter environment.
-   - Run all cells to train the XGBoost classifier and fit the standard scaler.
-   - The notebook automatically serializes the trained artifacts (`model.joblib` and `scaler.joblib`) into the `backend/models/` directory using `joblib`.
-2. **Backend Integration:**
-   - The FastAPI application (`backend/app.py`) loads these `.joblib` files into memory on startup.
-   - When a prediction is requested via the API, the backend standardizes the incoming JSON payload using the `scaler`, and feeds it to the `model` to return the diabetes probability percentage.
+### 1. 📂 The Dataset
+The dataset is tracked in this repository and is located at:
+* **[pima_with_hba1c.csv](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/pima_with_hba1c.csv)** (at the root of the project)
 
-*(Note: The exported `.joblib` models are actively tracked in this repository to ensure the backend is fully functional immediately after cloning.)*
+It contains **768 samples** with 10 clinical features (including HbA1c and BMI Category) used to train the classifier.
+
+### 2. 🧠 Retraining via Jupyter Notebook (`VI_Project_model_2.ipynb`)
+To retrain the model and regenerate the serialized prediction pipeline, you can run the provided notebook **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)** using one of the following methods:
+
+#### Method A: Using VS Code (Recommended)
+1. Install the **Jupyter** extension in VS Code.
+2. Open **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)**.
+3. Select your local `.venv` environment (with installed requirements) as the active kernel in the top-right corner.
+4. Click **Run All** to execute the notebook.
+
+#### Method B: Using Jupyter Notebook in Browser
+1. Install Jupyter in your virtual environment:
+   ```powershell
+   .\.venv\Scripts\pip install jupyter
+   ```
+2. Launch the Jupyter Notebook server:
+   ```powershell
+   .\.venv\Scripts\jupyter notebook
+   ```
+3. Your browser will open showing the directory. Click on **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)**.
+4. Go to **Cell > Run All** in the menu to execute the training process.
+
+### 3. 🤖 Model Export & Usage
+When you run the notebook:
+* It reads the local **[pima_with_hba1c.csv](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/pima_with_hba1c.csv)** dataset.
+* It trains the **XGBoost Classifier** model and fits a standard scaler.
+* It automatically serializes the trained artifacts (`model.joblib` and `scaler.joblib`) directly into the **`backend/models/`** directory.
+* On startup, the FastAPI application loads these `.joblib` files to serve inference requests instantly.
+
+*(Note: Staged and trained `.joblib` models are already tracked in the repository, so the backend is functional out-of-the-box.)*
 
 ---
 *Created for advanced health diagnostics and visual analytics.*
+

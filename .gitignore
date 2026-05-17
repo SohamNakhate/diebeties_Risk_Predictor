@@ -39,6 +39,7 @@ yarn-debug.log*
 # Data
 # Ignore large datasets to keep repo size small
 *.csv
+!pima_with_hba1c.csv
 *.dat
 *.h5
 

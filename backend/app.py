@@ -73,7 +73,7 @@ def save_users(users):
         json.dump(users, f, indent=4)
 
 # JWT Configuration
-SECRET_KEY = "super-secret-diabetes-key"
+SECRET_KEY = "super-secret-diabetes-key-secure-32-characters"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 1440 # 24 hours
 

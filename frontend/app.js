@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Replace with actual API call to the Python backend later.
             // Simulating API delay
-            const response = await fetch('http://localhost:8000/predict', {
+            const response = await fetch(`${window.location.origin}/predict`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

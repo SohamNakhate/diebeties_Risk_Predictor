@@ -6,3 +6,6 @@ joblib
 pandas
 xgboost
 numpy
+imbalanced-learn
+pyjwt
+python-multipart
