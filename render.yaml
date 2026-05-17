@@ -1,7 +1,0 @@
-services:
-  - type: web
-    name: diabetes-risk-predictor
-    runtime: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python app.py
-    plan: free
