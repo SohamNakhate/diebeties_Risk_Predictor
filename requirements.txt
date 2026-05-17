@@ -9,3 +9,6 @@ numpy
 imbalanced-learn
 pyjwt
 python-multipart
+sqlalchemy
+pymysql
+cryptography
