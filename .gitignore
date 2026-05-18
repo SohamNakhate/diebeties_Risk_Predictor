@@ -37,11 +37,14 @@ npm-debug.log*
 yarn-debug.log*
 
 # Data
-# Ignore large datasets to keep repo size small
+# Ignore large datasets and local databases to keep repo size small
 *.csv
 !pima_with_hba1c.csv
 *.dat
 *.h5
+*.db
+*.sqlite
+*.sqlite3
 
 # Models (Deliberately tracked for backend deployment)
 !*.joblib
