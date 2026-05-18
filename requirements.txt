@@ -10,5 +10,4 @@ imbalanced-learn
 pyjwt
 python-multipart
 sqlalchemy
-pymysql
-cryptography
+psycopg2-binary
