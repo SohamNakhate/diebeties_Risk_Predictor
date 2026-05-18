@@ -284,7 +284,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Replace with actual API call to the Python backend later.
             // Simulating API delay
-            const response = await fetch(`https://diabetes-backend.onrender.com/predict`, {
+            const response = await fetch(`https://diebeties-risk-predictor-deployment.onrender.com/predict`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
