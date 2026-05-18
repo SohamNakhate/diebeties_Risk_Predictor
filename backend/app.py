@@ -308,12 +308,4 @@ async def get_history(
         for r in records
     ]
 
-
-# ── Static Frontend ───────────────────────────────────────────────────────────
-
-@app.get("/")
-async def root():
-    return RedirectResponse(url="/login.html")
-
-frontend_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
-app.mount("/", StaticFiles(directory=frontend_dir, html=False), name="frontend")
+
