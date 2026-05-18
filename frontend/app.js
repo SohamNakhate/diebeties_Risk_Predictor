@@ -77,11 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     const viewVisualsBtns = document.querySelectorAll('.view-visuals-btn');
 
-    viewVisualsBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            window.open('analytics.html', '_blank');
-        });
-    });
+
 
     // Modal UI logic mapped to buttons
     const viewHistoryBtns = document.querySelectorAll('.view-history-btn');
