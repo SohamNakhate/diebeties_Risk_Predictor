@@ -2,6 +2,8 @@
 
 An advanced, AI-powered web application designed to predict the risk of diabetes based on clinical parameters. The system utilizes machine learning models to provide high-accuracy risk assessments and personalized lifestyle recommendations.
 
+**Demo**: [https://diebeties-risk-predictor-deployment.vercel.app/](https://diebeties-risk-predictor-deployment.vercel.app/)
+
 ## 🚀 Features
 
 - **AI Risk Assessment**: Uses a trained machine learning model (XGBoost) to evaluate diabetes risk.
