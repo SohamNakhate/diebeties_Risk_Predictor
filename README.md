@@ -7,17 +7,37 @@ An advanced, AI-powered web application designed to predict the risk of diabetes
 ## 🚀 Features
 
 - **AI Risk Assessment**: Uses a trained machine learning model (XGBoost) to evaluate diabetes risk.
-- **Clinical Analytics Dashboard**: A dedicated dashboard featuring clinical-grade visualisations (Radar, Scatter, Gauges, Bar charts) built with Chart.js to explain risk factors comprehensively.
+- **Clinical Analytics Dashboard**: A dedicated dashboard featuring clinical-grade visualisations (Grouped Bar, Horizontal Bar, 2D Diagnostic Scatter, Line, and Doughnut Gauges) built with Chart.js to explain risk factors comprehensively.
 - **Premium UI**: Modern, glassmorphism-inspired "bento grid" design with support for both Light and Dark modes.
-- **Secure Login Interface**: Built-in authentication entry point for secure access to the predictor.
+- **Secure Login Interface**: JWT-token authenticated access for patient profile isolation.
 - **Dynamic Recommendations**: Provides tailored lifestyle advice based on predicted risk levels.
 - **FastAPI Backend**: High-performance asynchronous API for seamless inference.
 - **Responsive Layout**: Optimized for both desktop and mobile viewing with zero layout shift.
 
+## 🔄 Project Workflow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Patient / Clinician
+    participant UI as Frontend (JS/CSS/Chart.js)
+    participant API as FastAPI Backend (app.py)
+    participant ML as XGBoost Pipeline (.joblib)
+    participant DB as SQL Database
+
+    User->>UI: Input clinical metrics (Glucose, HbA1c, Age, etc.)
+    UI->>API: POST /predict (metrics + JWT Auth Header)
+    API->>API: Validate JWT & sanitize input schema
+    API->>ML: Pass standardized feature array to Scaler & Model
+    ML-->>API: Return class prediction & confidence probability
+    API->>DB: Log transaction to historic predictions audit table
+    API-->>UI: Return risk tier, probability, and recommendations
+    UI->>User: Render interactive gauge, radar bar, & diagnostic quadrant charts
+```
+
 ## 🛠️ Technology Stack
 
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3 (Advanced animations & Mesh backgrounds), Chart.js (Data Visualizations).
-- **Backend**: FastAPI (Python), Static file mounting for frontend deployment.
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3 (Backdrop blur filters & Mesh backgrounds), Chart.js (Data Visualizations).
+- **Backend**: FastAPI (Python), SQLAlchemy ORM (SQLite/PostgreSQL database interface).
 - **Machine Learning**: Scikit-learn, XGBoost, Joblib for model persistence.
 - **Data**: Analysis based on the Pima Indians Diabetes Dataset.
 

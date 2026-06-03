@@ -65,4 +65,7 @@ build/
 
 # Vercel
 .vercel/
-.vercel
+.vercel
+
+# Misc
+INTERVIEW_PREP_GUIDE.md
