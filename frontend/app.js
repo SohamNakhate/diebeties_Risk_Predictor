@@ -25,13 +25,35 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem(getAnalyticsKey());
 
     // History Persistence Setup
-    function initHistory() {
+    async function initHistory() {
         const historyKey = getHistoryKey();
+        const username = localStorage.getItem('username');
+        const token = localStorage.getItem('token');
+
+        // Fetch from API first to sync the database history
+        if (token && username !== 'demo') {
+            try {
+                const response = await fetch(`https://diebeties-risk-predictor-deployment.onrender.com/api/history`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const serverHistory = await response.json();
+                    if (Array.isArray(serverHistory)) {
+                        localStorage.setItem(historyKey, JSON.stringify(serverHistory));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to sync history from backend:', error);
+            }
+        }
+
         let history = JSON.parse(localStorage.getItem(historyKey));
         
         // Force pre-populate realistic 6-month prediabetic history if empty or under 13 points (demo purposes)
         // ONLY apply this for the "demo" account as requested
-        const username = localStorage.getItem('username');
         if (username === 'demo' && (!history || history.length < 13)) {
             const now = Date.now();
             const twoWeeksMs = 1000 * 60 * 60 * 24 * 14; 
