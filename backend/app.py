@@ -205,14 +205,15 @@ async def predict_risk(
         )
 
     bmi_cat = get_bmi_category(data.bmi)
-    raw_features = [
+    features_to_scale = [
         data.pregnancies, data.glucose, data.bloodPressure,
         data.skinThickness, data.insulin, data.bmi,
-        data.dpf, data.age, data.hba1c, bmi_cat,
+        data.dpf, data.age, data.hba1c,
     ]
 
     try:
-        features = scaler.transform([raw_features])
+        scaled_features = list(scaler.transform([features_to_scale])[0])
+        features = [scaled_features + [bmi_cat]]
 
         if hasattr(model, "predict_proba"):
             probs         = model.predict_proba(features)[0]
