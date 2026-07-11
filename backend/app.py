@@ -13,59 +13,37 @@ import jwt
 from datetime import datetime, timedelta, timezone
 
 # ── Database ──────────────────────────────────────────────────────────────────
-from sqlalchemy import create_engine, Column, Integer, String, Float, DateTime, Text
-from sqlalchemy.orm import declarative_base, sessionmaker, Session
+import firebase_admin
+from firebase_admin import credentials, firestore
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "")
+firebase_db = None
 
-# Render gives 'postgres://' but SQLAlchemy requires 'postgresql://'
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-
-engine = create_engine(DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-Base = declarative_base()
-
-# ── Database Models ───────────────────────────────────────────────────────────
-
-class UserDB(Base):
-    __tablename__ = "users"
-    id            = Column(Integer, primary_key=True, index=True)
-    username      = Column(String(100), unique=True, index=True, nullable=False)
-    password_hash = Column(String(256), nullable=False)
-    created_at    = Column(DateTime, default=datetime.utcnow)
-
-
-class PredictionDB(Base):
-    __tablename__ = "predictions"
-    id                     = Column(Integer, primary_key=True, index=True)
-    username               = Column(String(100), index=True, nullable=False)
-    timestamp              = Column(DateTime, default=datetime.utcnow)
-    pregnancies            = Column(Float)
-    glucose                = Column(Float)
-    blood_pressure         = Column(Float)
-    skin_thickness         = Column(Float)
-    insulin                = Column(Float)
-    bmi                    = Column(Float)
-    dpf                    = Column(Float)
-    age                    = Column(Float)
-    hba1c                  = Column(Float)
-    risk_level             = Column(String(20))
-    prediction_probability = Column(Float)
-    confidence_score       = Column(Float)
-
-
-# Create tables on startup (safe to call repeatedly)
-Base.metadata.create_all(bind=engine)
+try:
+    firebase_creds_json = os.environ.get("FIREBASE_SERVICE_ACCOUNT")
+    if firebase_creds_json:
+        import json
+        creds_dict = json.loads(firebase_creds_json)
+        cred = credentials.Certificate(creds_dict)
+        firebase_admin.initialize_app(cred)
+        print("[OK] Firebase Admin SDK initialized with environment service account credentials.")
+    else:
+        local_key_path = os.environ.get("FIREBASE_KEY_PATH", "firebase-key.json")
+        if os.path.exists(local_key_path):
+            cred = credentials.Certificate(local_key_path)
+            firebase_admin.initialize_app(cred)
+            print(f"[OK] Firebase Admin SDK initialized with local key: {local_key_path}")
+        else:
+            print("[WARN] FIREBASE_SERVICE_ACCOUNT env var not set and firebase-key.json not found. Initializing with Default Credentials.")
+            firebase_admin.initialize_app()
+    
+    firebase_db = firestore.client()
+except Exception as e:
+    print(f"[ERROR] Failed to initialize Firebase Admin SDK: {e}")
 
 # ── Dependency ────────────────────────────────────────────────────────────────
 
 def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+    yield firebase_db
 
 # ── App Setup ─────────────────────────────────────────────────────────────────
 
@@ -179,24 +157,35 @@ def health_check():
 
 
 @app.post("/api/signup")
-async def signup(user: UserSignup, db: Session = Depends(get_db)):
-    existing = db.query(UserDB).filter(UserDB.username == user.username).first()
-    if existing:
+async def signup(user: UserSignup, db = Depends(get_db)):
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    user_ref = db.collection("users").document(user.username)
+    doc = user_ref.get()
+    if doc.exists:
         raise HTTPException(status_code=400, detail="Username already exists")
 
-    new_user = UserDB(
-        username      = user.username,
-        password_hash = hash_password(user.password),
-    )
-    db.add(new_user)
-    db.commit()
+    user_ref.set({
+        "username": user.username,
+        "password_hash": hash_password(user.password),
+        "created_at": datetime.now(timezone.utc)
+    })
     return {"message": "User created successfully"}
 
 
 @app.post("/api/login")
-async def login(user: UserAuth, db: Session = Depends(get_db)):
-    db_user = db.query(UserDB).filter(UserDB.username == user.username).first()
-    if not db_user or db_user.password_hash != hash_password(user.password):
+async def login(user: UserAuth, db = Depends(get_db)):
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    user_ref = db.collection("users").document(user.username)
+    doc = user_ref.get()
+    if not doc.exists:
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    user_data = doc.to_dict()
+    if user_data.get("password_hash") != hash_password(user.password):
         raise HTTPException(status_code=401, detail="Invalid username or password")
 
     token = create_access_token(data={"sub": user.username})
@@ -207,7 +196,7 @@ async def login(user: UserAuth, db: Session = Depends(get_db)):
 async def predict_risk(
     data: PredictionInput,
     current_user: str = Depends(verify_token),
-    db: Session = Depends(get_db),
+    db = Depends(get_db),
 ):
     if model is None or scaler is None:
         raise HTTPException(
@@ -247,23 +236,24 @@ async def predict_risk(
             confidence    = 1.0
 
         # ── Save prediction to DB ──────────────────────────────────────────
-        record = PredictionDB(
-            username               = current_user,
-            pregnancies            = data.pregnancies,
-            glucose                = data.glucose,
-            blood_pressure         = data.bloodPressure,
-            skin_thickness         = data.skinThickness,
-            insulin                = data.insulin,
-            bmi                    = data.bmi,
-            dpf                    = data.dpf,
-            age                    = data.age,
-            hba1c                  = data.hba1c,
-            risk_level             = risk_level,
-            prediction_probability = prob_diabetes,
-            confidence_score       = confidence,
-        )
-        db.add(record)
-        db.commit()
+        if db is not None:
+            prediction_data = {
+                "username":               current_user,
+                "timestamp":              datetime.now(timezone.utc),
+                "pregnancies":            data.pregnancies,
+                "glucose":                data.glucose,
+                "blood_pressure":         data.bloodPressure,
+                "skin_thickness":         data.skinThickness,
+                "insulin":                data.insulin,
+                "bmi":                    data.bmi,
+                "dpf":                    data.dpf,
+                "age":                    data.age,
+                "hba1c":                  data.hba1c,
+                "risk_level":             risk_level,
+                "prediction_probability": prob_diabetes,
+                "confidence_score":       confidence,
+            }
+            db.collection("predictions").add(prediction_data)
 
         return {
             "risk_level":             risk_level,
@@ -280,32 +270,49 @@ async def predict_risk(
 @app.get("/api/history")
 async def get_history(
     current_user: str = Depends(verify_token),
-    db: Session = Depends(get_db),
+    db = Depends(get_db),
 ):
     """Return all past predictions for the logged-in user."""
-    records = (
-        db.query(PredictionDB)
-        .filter(PredictionDB.username == current_user)
-        .order_by(PredictionDB.timestamp.desc())
-        .all()
-    )
+    if db is None:
+        raise HTTPException(status_code=500, detail="Database connection not initialized")
+
+    docs = db.collection("predictions").where("username", "==", current_user).stream()
+    records = []
+    for doc in docs:
+        r = doc.to_dict()
+        records.append(r)
+
+    # Sort by timestamp descending
+    def get_timestamp(record):
+        ts = record.get("timestamp")
+        if isinstance(ts, datetime):
+            return ts
+        if isinstance(ts, str):
+            try:
+                return datetime.fromisoformat(ts)
+            except ValueError:
+                pass
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+    records.sort(key=get_timestamp, reverse=True)
+
     return [
         {
-            "timestamp":              r.timestamp.isoformat(),
-            "pregnancies":            r.pregnancies,
-            "glucose":                r.glucose,
-            "bloodPressure":          r.blood_pressure,
-            "skinThickness":          r.skin_thickness,
-            "insulin":                r.insulin,
-            "bmi":                    r.bmi,
-            "dpf":                    r.dpf,
-            "age":                    r.age,
-            "hba1c":                  r.hba1c,
-            "risk_level":             r.risk_level,
-            "prediction_probability": r.prediction_probability,
-            "confidence_score":       r.confidence_score,
+            "timestamp":              (r.get("timestamp").isoformat() if isinstance(r.get("timestamp"), datetime) else str(r.get("timestamp"))),
+            "pregnancies":            r.get("pregnancies"),
+            "glucose":                r.get("glucose"),
+            "bloodPressure":          r.get("blood_pressure"),
+            "skinThickness":          r.get("skin_thickness"),
+            "insulin":                r.get("insulin"),
+            "bmi":                    r.get("bmi"),
+            "dpf":                    r.get("dpf"),
+            "age":                    r.get("age"),
+            "hba1c":                  r.get("hba1c"),
+            "risk_level":             r.get("risk_level"),
+            "prediction_probability": r.get("prediction_probability"),
+            "confidence_score":       r.get("confidence_score"),
         }
         for r in records
     ]
 
-
+

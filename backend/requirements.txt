@@ -9,5 +9,4 @@ numpy
 imbalanced-learn
 pyjwt
 python-multipart
-sqlalchemy
-psycopg2-binary
+firebase-admin

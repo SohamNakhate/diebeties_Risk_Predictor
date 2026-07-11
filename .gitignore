@@ -69,3 +69,6 @@ build/
 
 # Misc
 INTERVIEW_PREP_GUIDE.md
+
+# Firebase secrets
+firebase-key.json

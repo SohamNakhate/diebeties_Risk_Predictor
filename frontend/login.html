@@ -302,5 +302,23 @@
             80% { transform: translateX(6px); }
         }
     </style>
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTrqM4hbL5giOg9MPK640uPpk1MJQ7PE0",
+            authDomain: "diabetes-risk-predictor-b30ec.firebaseapp.com",
+            projectId: "diabetes-risk-predictor-b30ec",
+            storageBucket: "diabetes-risk-predictor-b30ec.firebasestorage.app",
+            messagingSenderId: "349418007615",
+            appId: "1:349418007615:web:de04f00e68a572346b9c8a",
+            measurementId: "G-M27HE5EHRW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
 </body>
 </html>
