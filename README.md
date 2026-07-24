@@ -2,20 +2,42 @@
 
 An advanced, AI-powered web application designed to predict the risk of diabetes based on clinical parameters. The system utilizes machine learning models to provide high-accuracy risk assessments and personalized lifestyle recommendations.
 
+**Demo**: [https://diebeties-risk-predictor-deployment.vercel.app/](https://diebeties-risk-predictor-deployment.vercel.app/)
+
 ## 🚀 Features
 
 - **AI Risk Assessment**: Uses a trained machine learning model (XGBoost) to evaluate diabetes risk.
-- **Clinical Analytics Dashboard**: A dedicated dashboard featuring clinical-grade visualisations (Radar, Scatter, Gauges, Bar charts) built with Chart.js to explain risk factors comprehensively.
+- **Clinical Analytics Dashboard**: A dedicated dashboard featuring clinical-grade visualisations (Grouped Bar, Horizontal Bar, 2D Diagnostic Scatter, Line, and Doughnut Gauges) built with Chart.js to explain risk factors comprehensively.
 - **Premium UI**: Modern, glassmorphism-inspired "bento grid" design with support for both Light and Dark modes.
-- **Secure Login Interface**: Built-in authentication entry point for secure access to the predictor.
+- **Secure Login Interface**: JWT-token authenticated access for patient profile isolation.
 - **Dynamic Recommendations**: Provides tailored lifestyle advice based on predicted risk levels.
 - **FastAPI Backend**: High-performance asynchronous API for seamless inference.
 - **Responsive Layout**: Optimized for both desktop and mobile viewing with zero layout shift.
 
+## 🔄 Project Workflow
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as Patient / Clinician
+    participant UI as Frontend (JS/CSS/Chart.js)
+    participant API as FastAPI Backend (app.py)
+    participant ML as XGBoost Pipeline (.joblib)
+    participant DB as SQL Database
+
+    User->>UI: Input clinical metrics (Glucose, HbA1c, Age, etc.)
+    UI->>API: POST /predict (metrics + JWT Auth Header)
+    API->>API: Validate JWT & sanitize input schema
+    API->>ML: Pass standardized feature array to Scaler & Model
+    ML-->>API: Return class prediction & confidence probability
+    API->>DB: Log transaction to historic predictions audit table
+    API-->>UI: Return risk tier, probability, and recommendations
+    UI->>User: Render interactive gauge, radar bar, & diagnostic quadrant charts
+```
+
 ## 🛠️ Technology Stack
 
-- **Frontend**: Vanilla JavaScript, HTML5, CSS3 (Advanced animations & Mesh backgrounds), Chart.js (Data Visualizations).
-- **Backend**: FastAPI (Python), Static file mounting for frontend deployment.
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3 (Backdrop blur filters & Mesh backgrounds), Chart.js (Data Visualizations).
+- **Backend**: FastAPI (Python), SQLAlchemy ORM (SQLite/PostgreSQL database interface).
 - **Machine Learning**: Scikit-learn, XGBoost, Joblib for model persistence.
 - **Data**: Analysis based on the Pima Indians Diabetes Dataset.
 
@@ -54,19 +76,46 @@ The analysis leverages both ML probabilities and strict clinical thresholds (ADA
 - **HbA1c Level (%)**: A measure of average blood sugar over the past 3 months (ADA standard).
 - **BMI Category**: Clinically derived category (Underweight, Normal, Overweight, Obese).
 
-## 🤖 Model Export & Usage
+## 📊 Dataset & Model Retraining
 
-The core Machine Learning models are generated via a Jupyter Notebook and exported for backend use.
+The project includes the original dataset and a Jupyter Notebook to allow you to easily retrain the machine learning model.
 
-1. **Training & Exporting:**
-   - Open `VI_Project_model_2.ipynb` in your preferred Jupyter environment.
-   - Run all cells to train the XGBoost classifier and fit the standard scaler.
-   - The notebook automatically serializes the trained artifacts (`model.joblib` and `scaler.joblib`) into the `backend/models/` directory using `joblib`.
-2. **Backend Integration:**
-   - The FastAPI application (`backend/app.py`) loads these `.joblib` files into memory on startup.
-   - When a prediction is requested via the API, the backend standardizes the incoming JSON payload using the `scaler`, and feeds it to the `model` to return the diabetes probability percentage.
+### 1. 📂 The Dataset
+The dataset is tracked in this repository and is located at:
+* **[pima_with_hba1c.csv](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/pima_with_hba1c.csv)** (at the root of the project)
 
-*(Note: The exported `.joblib` models are actively tracked in this repository to ensure the backend is fully functional immediately after cloning.)*
+It contains **768 samples** with 10 clinical features (including HbA1c and BMI Category) used to train the classifier.
+
+### 2. 🧠 Retraining via Jupyter Notebook (`VI_Project_model_2.ipynb`)
+To retrain the model and regenerate the serialized prediction pipeline, you can run the provided notebook **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)** using one of the following methods:
+
+#### Method A: Using VS Code (Recommended)
+1. Install the **Jupyter** extension in VS Code.
+2. Open **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)**.
+3. Select your local `.venv` environment (with installed requirements) as the active kernel in the top-right corner.
+4. Click **Run All** to execute the notebook.
+
+#### Method B: Using Jupyter Notebook in Browser
+1. Install Jupyter in your virtual environment:
+   ```powershell
+   .\.venv\Scripts\pip install jupyter
+   ```
+2. Launch the Jupyter Notebook server:
+   ```powershell
+   .\.venv\Scripts\jupyter notebook
+   ```
+3. Your browser will open showing the directory. Click on **[VI_Project_model_2.ipynb](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/VI_Project_model_2.ipynb)**.
+4. Go to **Cell > Run All** in the menu to execute the training process.
+
+### 3. 🤖 Model Export & Usage
+When you run the notebook:
+* It reads the local **[pima_with_hba1c.csv](file:///d:/Projects/diebeties_Risk_Predictor_Deployment/pima_with_hba1c.csv)** dataset.
+* It trains the **XGBoost Classifier** model and fits a standard scaler.
+* It automatically serializes the trained artifacts (`model.joblib` and `scaler.joblib`) directly into the **`backend/models/`** directory.
+* On startup, the FastAPI application loads these `.joblib` files to serve inference requests instantly.
+
+*(Note: Staged and trained `.joblib` models are already tracked in the repository, so the backend is functional out-of-the-box.)*
 
 ---
 *Created for advanced health diagnostics and visual analytics.*
+

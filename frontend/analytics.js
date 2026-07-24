@@ -132,7 +132,30 @@ document.addEventListener('DOMContentLoaded', () => {
     // ─── Main ─────────────────────────────────────────────────────────────────
     window.chartInstances = {};
 
-    function init() {
+    async function init() {
+        const token = localStorage.getItem('token');
+        const username = localStorage.getItem('username');
+        const historyKey = getHistoryKey();
+
+        if (token && username !== 'demo') {
+            try {
+                const response = await fetch(`https://diebeties-risk-predictor-deployment.onrender.com/api/history`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const serverHistory = await response.json();
+                    if (Array.isArray(serverHistory)) {
+                        localStorage.setItem(historyKey, JSON.stringify(serverHistory));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to sync history from backend:', error);
+            }
+        }
+
         let raw = localStorage.getItem(getAnalyticsKey());
         let data = null;
         
@@ -142,7 +165,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // If no recent analytics data, fallback to the latest history
         if (!data) {
-            const history = JSON.parse(localStorage.getItem(getHistoryKey()) || '[]');
+            const history = JSON.parse(localStorage.getItem(historyKey) || '[]');
             if (history.length > 0) {
                 data = history[0];
             }

@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Detailed Analytics - Diabetes Risk Predictor</title>
+    <title>Diabetes Risk Predictor | AI Health Analyzer</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="description"
+        content="AI-powered tool to predict diabetes risk and get personalized lifestyle recommendations.">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -177,6 +180,25 @@
 
         </div><!-- /charts-section -->
     </main>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-analytics.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDTrqM4hbL5giOg9MPK640uPpk1MJQ7PE0",
+            authDomain: "diabetes-risk-predictor-b30ec.firebaseapp.com",
+            projectId: "diabetes-risk-predictor-b30ec",
+            storageBucket: "diabetes-risk-predictor-b30ec.firebasestorage.app",
+            messagingSenderId: "349418007615",
+            appId: "1:349418007615:web:de04f00e68a572346b9c8a",
+            measurementId: "G-M27HE5EHRW"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0"></script>
     <script src="analytics.js"></script>

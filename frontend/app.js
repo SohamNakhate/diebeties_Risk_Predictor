@@ -25,13 +25,35 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.removeItem(getAnalyticsKey());
 
     // History Persistence Setup
-    function initHistory() {
+    async function initHistory() {
         const historyKey = getHistoryKey();
+        const username = localStorage.getItem('username');
+        const token = localStorage.getItem('token');
+
+        // Fetch from API first to sync the database history
+        if (token && username !== 'demo') {
+            try {
+                const response = await fetch(`https://diebeties-risk-predictor-deployment.onrender.com/api/history`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                if (response.ok) {
+                    const serverHistory = await response.json();
+                    if (Array.isArray(serverHistory)) {
+                        localStorage.setItem(historyKey, JSON.stringify(serverHistory));
+                    }
+                }
+            } catch (error) {
+                console.error('Failed to sync history from backend:', error);
+            }
+        }
+
         let history = JSON.parse(localStorage.getItem(historyKey));
         
         // Force pre-populate realistic 6-month prediabetic history if empty or under 13 points (demo purposes)
         // ONLY apply this for the "demo" account as requested
-        const username = localStorage.getItem('username');
         if (username === 'demo' && (!history || history.length < 13)) {
             const now = Date.now();
             const twoWeeksMs = 1000 * 60 * 60 * 24 * 14; 
@@ -77,11 +99,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const resetBtn = document.getElementById('reset-btn');
     const viewVisualsBtns = document.querySelectorAll('.view-visuals-btn');
 
-    viewVisualsBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            window.open('analytics.html', '_blank');
-        });
-    });
+
 
     // Modal UI logic mapped to buttons
     const viewHistoryBtns = document.querySelectorAll('.view-history-btn');
@@ -284,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             // Replace with actual API call to the Python backend later.
             // Simulating API delay
-            const response = await fetch('http://localhost:8000/predict', {
+            const response = await fetch(`https://diebeties-risk-predictor-deployment.onrender.com/predict`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
